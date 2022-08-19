@@ -1,0 +1,11 @@
+[paths]
+source =
+    fintecture
+    */site-packages
+
+[run]
+branch = true
+parallel = true
+source = fintecture
+omit =
+    fintecture/six.py
