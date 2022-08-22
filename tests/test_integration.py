@@ -29,9 +29,25 @@ class TestIntegration(object):
             self.mock_server_thread.join()
 
     @pytest.fixture(autouse=True)
+    def api_base(self):
+        from fintecture import production_api_base, sandbox_api_base, env
+
+        if env not in fintecture.AVAILABLE_ENVS:
+            raise ValueError(
+                "Defined environment value is invalid. "
+                "Please check that specified environment value is one of %r\n" % fintecture.AVAILABLE_ENVS
+            )
+        if env == fintecture.ENVIRONMENT_SANDBOX:
+            return sandbox_api_base
+        elif env == fintecture.ENVIRONMENT_PRODUCTION:
+            return production_api_base
+
+        return sandbox_api_base
+
+    @pytest.fixture(autouse=True)
     def setup_fintecture(self):
         orig_attrs = {
-            "api_base": fintecture.api_base,
+            "api_base": self.api_base(),
             "api_key": fintecture.api_key,
             "default_http_client": fintecture.default_http_client,
             "enable_telemetry": fintecture.enable_telemetry,

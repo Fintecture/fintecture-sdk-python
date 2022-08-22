@@ -107,3 +107,12 @@ print("Success: %r" % (resp_request_to_pay))
 #   ]
 # }'
 # (HTTP response code was 500)
+#
+# This error is received when the value of "redirect_uri" param is not
+# registered inside Developer Console of Fintecture Application.
+
+# after connecting with above URL we receive data from callback redirected URI as bellow
+# session_id        fee8b638c1c44af1a4a2dd7dd781ecf8
+# status            payment_created
+# provider          cmcifrpp
+# state             1234

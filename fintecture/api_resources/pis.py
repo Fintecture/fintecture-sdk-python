@@ -4,8 +4,7 @@ from __future__ import absolute_import, division, print_function
 import base64
 import fintecture
 
-from fintecture import error
-
+from fintecture import api_requestor, error
 from fintecture.api_resources.abstract import APIResource
 from fintecture.api_resources.payment import Payment
 
@@ -23,26 +22,29 @@ class PIS(APIResource):
         return Payment.initiate(provider_id, redirect_uri, **params)
 
     @classmethod
-    def oauth(cls, **params):
+    def oauth(cls, app_id=None, app_secret=None, **params):
+        app_id = app_id or fintecture.app_id
+        app_secret = app_secret or fintecture.app_secret
+
         params.update({
-            'app_id': fintecture.app_id,
+            'app_id': app_id,
             'grant_type': 'client_credentials',
             'scope': 'PIS',
-            'headers': {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': "Basic {}".format(
-                    base64.b64encode("{}:{}".format(
-                        fintecture.app_id,
-                        fintecture.app_secret
-                    ).encode('utf-8')).decode('utf-8')
-                )
-            }
         })
-        return cls._static_request(
-            "post",
-            "/oauth/accesstoken",
-            params=params,
-        )
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': "Basic {}".format(
+                base64.b64encode("{}:{}".format(
+                    app_id,
+                    app_secret
+                ).encode('utf-8')).decode('utf-8')
+            )
+        }
+
+        requestor = api_requestor.APIRequestor(app_id, app_secret)
+        response, _ = requestor.request("post", "/oauth/accesstoken", params, headers)
+
+        return response.data
 
     @classmethod
     def initiate_refund(cls, **params):

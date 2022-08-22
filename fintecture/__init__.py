@@ -5,7 +5,6 @@ import os
 # Fintecture Python bindings
 # API docs at https://docs.fintecture.com/
 
-
 # API resources
 from fintecture.environments import *  # noqa
 
@@ -14,7 +13,7 @@ from fintecture.environments import *  # noqa
 app_id = None
 app_secret = None
 private_key = None
-environment = None
+env = DEFAULT_ENV
 
 access_token = None
 api_key = None
@@ -22,8 +21,6 @@ client_id = None
 
 production_api_base = "https://api.fintecture.com"
 sandbox_api_base = "https://api-sandbox.fintecture.com"
-
-env = DEFAULT_ENV
 
 api_version = None
 verify_ssl_certs = True

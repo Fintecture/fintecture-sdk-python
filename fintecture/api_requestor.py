@@ -125,7 +125,7 @@ class APIRequestor(object):
         if env not in fintecture.AVAILABLE_ENVS:
             raise ValueError(
                 "Defined environment value is invalid. "
-                "Please check that available environment values is one of %r\n" % (fintecture.AVAILABLE_ENVS)
+                "Please check that specified environment value is one of %r\n" % fintecture.AVAILABLE_ENVS
             )
         if env == fintecture.ENVIRONMENT_SANDBOX:
             return sandbox_api_base
@@ -144,18 +144,18 @@ class APIRequestor(object):
         return str
 
     def request(self, method, url, params=None, headers=None):
-        rbody, rcode, rheaders, my_api_key = self.request_raw(
+        rbody, rcode, rheaders, my_app_id = self.request_raw(
             method.lower(), url, params, headers, is_streaming=False
         )
         resp = self.interpret_response(rbody, rcode, rheaders)
-        return resp, my_api_key
+        return resp, my_app_id
 
     def request_stream(self, method, url, params=None, headers=None):
-        stream, rcode, rheaders, my_api_key = self.request_raw(
+        stream, rcode, rheaders, my_app_id = self.request_raw(
             method.lower(), url, params, headers, is_streaming=True
         )
         resp = self.interpret_streaming_response(stream, rcode, rheaders)
-        return resp, my_api_key
+        return resp, my_app_id
 
     def handle_error_response(self, rbody, rcode, resp, rheaders):
         try:
@@ -192,30 +192,34 @@ class APIRequestor(object):
         if isinstance(error_data, list) and len(error_data) > 0:
             error_data = error_data[0]
 
+        code = error_data.get("code")
+        title = error_data.get("title")
+        detail = error_data.get("detail")
+        message = error_data.get("message")
+
         util.log_info(
             "Fintecture API error received",
-            error_code=error_data.get("code"),
-            error_title=error_data.get("title"),
-            error_message=error_data.get("message"),
+            error_code=code,
+            error_title=title,
+            error_message=message,
+            error_detail=detail,
         )
 
         # Rate limits were previously coded as 400's with code 'rate_limit'
-        if rcode == 429 or (
-            rcode == 400 and error_data.get("code") == "rate_limit"
-        ):
+        if rcode == 429 or (rcode == 400 and code == "rate_limit"):
             return error.RateLimitError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
+                detail, rbody, rcode, resp, rheaders
             )
         elif rcode in [400, 404]:
             if error_data.get("type") == "idempotency_error":
                 return error.IdempotencyError(
-                    error_data.get("message"), rbody, rcode, resp, rheaders
+                    detail, rbody, rcode, resp, rheaders
                 )
             else:
                 return error.InvalidRequestError(
-                    error_data.get("message"),
-                    error_data.get("param"),
-                    error_data.get("code"),
+                    title,
+                    detail,
+                    code,
                     rbody,
                     rcode,
                     resp,
@@ -223,13 +227,13 @@ class APIRequestor(object):
                 )
         elif rcode == 401:
             return error.AuthenticationError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
+                message, rbody, rcode, resp, rheaders
             )
         elif rcode == 402:
             return error.CardError(
-                error_data.get("message"),
-                error_data.get("param"),
-                error_data.get("code"),
+                title,
+                detail,
+                code,
                 rbody,
                 rcode,
                 resp,
@@ -237,11 +241,11 @@ class APIRequestor(object):
             )
         elif rcode == 403:
             return error.PermissionError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
+                title, rbody, rcode, resp, rheaders
             )
         else:
             return error.APIError(
-                error_data.get("message"), rbody, rcode, resp, rheaders
+                title, rbody, rcode, resp, rheaders
             )
 
     def specific_oauth_error(self, rbody, rcode, resp, rheaders, error_code):
