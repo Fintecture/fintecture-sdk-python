@@ -178,13 +178,21 @@ class APIRequestor(object):
             err = self.specific_oauth_error(
                 rbody, rcode, resp, rheaders, error_data
             )
+            raise err
 
         if err is None:
             err = self.specific_api_error(
                 rbody, rcode, resp, rheaders, error_data
             )
+            raise err
 
-        raise err
+        raise error.APIError(
+            "Invalid response object from API: %r (HTTP response code "
+            "was %d)" % (rbody, rcode),
+            rbody,
+            rcode,
+            resp,
+        )
 
     def specific_api_error(self, rbody, rcode, resp, rheaders, error_data):
 
