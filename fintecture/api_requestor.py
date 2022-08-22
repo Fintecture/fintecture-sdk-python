@@ -184,7 +184,6 @@ class APIRequestor(object):
             err = self.specific_api_error(
                 rbody, rcode, resp, rheaders, error_data
             )
-            raise err
 
         raise error.APIError(
             "Invalid response object from API: %r (HTTP response code "
