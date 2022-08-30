@@ -46,7 +46,6 @@ class FintectureObject(dict):
         id=None,
         app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         last_response=None,
         **params
     ):
@@ -63,7 +62,6 @@ class FintectureObject(dict):
 
         object.__setattr__(self, "app_id", app_id)
         object.__setattr__(self, "fintecture_version", fintecture_version)
-        object.__setattr__(self, "fintecture_account", fintecture_account)
 
         if id:
             self["id"] = id
@@ -157,7 +155,6 @@ class FintectureObject(dict):
                 self.get("id", None),
                 self.app_id,
                 self.fintecture_version,
-                self.fintecture_account,
             ),
             dict(self),  # state
         )
@@ -169,21 +166,18 @@ class FintectureObject(dict):
         values,
         app_id,
         fintecture_version=None,
-        fintecture_account=None,
         last_response=None,
     ):
         instance = cls(
             values.get("id"),
             app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             last_response=last_response,
         )
         instance.refresh_from(
             values,
             app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             last_response=last_response,
         )
         return instance
@@ -192,32 +186,21 @@ class FintectureObject(dict):
         self,
         values,
         app_id=None,
-        partial=False,
         fintecture_version=None,
-        fintecture_account=None,
         last_response=None,
     ):
         self.app_id = app_id or getattr(values, "app_id", None)
         self.fintecture_version = fintecture_version or getattr(
             values, "fintecture_version", None
         )
-        self.fintecture_account = fintecture_account or getattr(
-            values, "fintecture_account", None
-        )
         self._last_response = last_response or getattr(
             values, "_last_response", None
         )
 
-        # Wipe old state before setting new.  This is useful for e.g.
-        # updating a customer, where there is no persistent card
-        # parameter.  Mark those values which don't persist as transient
-        if partial:
-            self._unsaved_values = self._unsaved_values - set(values)
-        else:
-            removed = set(self.keys()) - set(values)
-            self._transient_values = self._transient_values | removed
-            self._unsaved_values = set()
-            self.clear()
+        removed = set(self.keys()) - set(values)
+        self._transient_values = self._transient_values | removed
+        self._unsaved_values = set()
+        self.clear()
 
         self._transient_values = self._transient_values - set(values)
 
@@ -225,7 +208,7 @@ class FintectureObject(dict):
             super(FintectureObject, self).__setitem__(
                 k,
                 util.convert_to_fintecture_object(
-                    v, app_id, fintecture_version, fintecture_account
+                    v, app_id, fintecture_version
                 ),
             )
 
@@ -247,21 +230,13 @@ class FintectureObject(dict):
         method_,
         url_,
         app_id=None,
-        idempotency_key=None,
         fintecture_version=None,
-        fintecture_account=None,
         headers=None,
         params=None,
     ):
         params = None if params is None else params.copy()
-        idempotency_key = util.read_special_variable(
-            params, "idempotency_key", idempotency_key
-        )
         fintecture_version = util.read_special_variable(
             params, "fintecture_version", fintecture_version
-        )
-        fintecture_account = util.read_special_variable(
-            params, "fintecture_account", fintecture_account
         )
         fintecture_app_id = util.read_special_variable(
             params, "app_id", app_id
@@ -274,7 +249,6 @@ class FintectureObject(dict):
         )
         headers = util.read_special_variable(params, "headers", headers)
 
-        fintecture_account = fintecture_account or self.fintecture_account
         fintecture_version = fintecture_version or self.fintecture_version
 
         fintecture_app_id = fintecture_app_id or self.app_id
@@ -286,31 +260,13 @@ class FintectureObject(dict):
             private_key=fintecture_private_key,
             api_base=self.api_base(),
             api_version=fintecture_version,
-            account=fintecture_account,
         )
-
-        if idempotency_key is not None:
-            headers = {} if headers is None else headers.copy()
-            headers.update(util.populate_headers(idempotency_key))
 
         response, my_app_id = requestor.request(method_, url_, params, headers)
 
         return util.convert_to_fintecture_object(
-            response, my_app_id, fintecture_version, fintecture_account, params
+            response, my_app_id, fintecture_version, params
         )
-
-    def request_stream(self, method, url, params=None, headers=None):
-        if params is None:
-            params = self._retrieve_params
-        requestor = api_requestor.APIRequestor(
-            app_id=self.app_id,
-            api_base=self.api_base(),
-            api_version=self.fintecture_version,
-            account=self.fintecture_account,
-        )
-        response, _ = requestor.request_stream(method, url, params, headers)
-
-        return response
 
     def __repr__(self):
         ident_parts = [type(self).__name__]
@@ -394,7 +350,6 @@ class FintectureObject(dict):
             self.get("id"),
             self.app_id,
             fintecture_version=self.fintecture_version,
-            fintecture_account=self.fintecture_account,
         )
 
         copied._retrieve_params = self._retrieve_params

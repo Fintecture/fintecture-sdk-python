@@ -101,7 +101,7 @@ class TestFintectureObject(object):
         )
 
         assert obj.id == "foo"
-        assert obj.api_key == "bar"
+        assert obj.app_id == "bar"
 
     def test_access(self):
         obj = fintecture.fintecture_object.FintectureObject("myid", "mykey", myparam=5)
@@ -138,11 +138,10 @@ class TestFintectureObject(object):
             {"foo": "bar", "trans": "me"}, "myappid"
         )
 
-        assert obj.api_key == "mykey"
+        assert obj.app_id == "mykey"
         assert obj.foo == "bar"
         assert obj["trans"] == "me"
         assert obj.fintecture_version is None
-        assert obj.fintecture_account is None
         assert obj.last_response is None
 
         last_response = mocker.Mock()
@@ -150,7 +149,6 @@ class TestFintectureObject(object):
             {"foo": "baz", "johnny": 5},
             "key2",
             fintecture_version="2017-08-15",
-            fintecture_account="acct_foo",
             last_response=last_response,
         )
 
@@ -158,9 +156,8 @@ class TestFintectureObject(object):
         assert obj.foo == "baz"
         with pytest.raises(AttributeError):
             obj.trans
-        assert obj.api_key == "key2"
+        assert obj.app_id == "key2"
         assert obj.fintecture_version == "2017-08-15"
-        assert obj.fintecture_account == "acct_foo"
         assert obj.last_response == last_response
 
         obj.refresh_from(
@@ -174,15 +171,13 @@ class TestFintectureObject(object):
         obj = fintecture.fintecture_object.FintectureObject.construct_from(
             {"foos": {"type": "list", "data": [{"id": "nested"}]}},
             "app_id",
-            fintecture_account="acct_foo",
         )
 
         nested = obj.foos.data[0]
 
-        assert obj.api_key == "key"
+        assert obj.app_id == "key"
         assert nested.id == "nested"
-        assert nested.api_key == "key"
-        assert nested.fintecture_account == "acct_foo"
+        assert nested.app_id == "key"
 
     def test_refresh_from_nested_object(self):
         obj = fintecture.fintecture_object.FintectureObject.construct_from(
@@ -262,8 +257,7 @@ class TestFintectureObject(object):
                 # ensures that empty strings are correctly unpickled in Py3
                 "emptystring": "",
             },
-            api_key="bar",
-            partial=True,
+            app_id="bar",
         )
 
         assert obj.fala == "lalala"
@@ -272,7 +266,7 @@ class TestFintectureObject(object):
         newobj = pickle.loads(pickled)
 
         assert newobj.id == "foo"
-        assert newobj.api_key == "bar"
+        assert newobj.app_id == "bar"
         assert newobj["object"] == "boo"
         assert newobj.fala == "lalala"
         assert newobj.emptystring == ""
@@ -287,7 +281,7 @@ class TestFintectureObject(object):
         with pytest.raises(AttributeError):
             obj.coupon
 
-        obj.refresh_from({"coupon": "foo"}, api_key="bar", partial=True)
+        obj.refresh_from({"coupon": "foo"}, app_id="bar")
         assert obj.coupon == "foo"
 
     def test_deletion_metadata(self):
@@ -308,7 +302,6 @@ class TestFintectureObject(object):
         obj = fintecture.fintecture_object.FintectureObject.construct_from(
             {"empty": "", "value": "foo", "nested": nested},
             "myappid",
-            fintecture_account="myaccount",
         )
 
         copied = copy(obj)
@@ -317,8 +310,7 @@ class TestFintectureObject(object):
         assert copied.value == "foo"
         assert copied.nested.value == "bar"
 
-        assert copied.api_key == "mykey"
-        assert copied.fintecture_account == "myaccount"
+        assert copied.app_id == "mykey"
 
         # Verify that we're not deep copying nested values.
         assert id(nested) == id(copied.nested)
@@ -330,7 +322,6 @@ class TestFintectureObject(object):
         obj = fintecture.fintecture_object.FintectureObject.construct_from(
             {"empty": "", "value": "foo", "nested": nested},
             "myappid",
-            fintecture_account="myaccount",
         )
 
         copied = deepcopy(obj)
@@ -339,8 +330,7 @@ class TestFintectureObject(object):
         assert copied.value == "foo"
         assert copied.nested.value == "bar"
 
-        assert copied.api_key == "mykey"
-        assert copied.fintecture_account == "myaccount"
+        assert copied.app_id == "mykey"
 
         # Verify that we're actually deep copying nested values.
         assert id(nested) != id(copied.nested)

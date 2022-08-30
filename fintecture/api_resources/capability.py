@@ -26,7 +26,7 @@ class Capability(UpdateableAPIResource):
         )
 
     @classmethod
-    def retrieve(cls, id, api_key=None, **params):
+    def retrieve(cls, id, app_id=None, **params):
         raise NotImplementedError(
             "Can't retrieve a capability without an account ID. Retrieve a capability using "
             "account.retrieve_capability('acct_123', 'acap_123')"

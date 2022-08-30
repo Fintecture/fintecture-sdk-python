@@ -4,7 +4,7 @@ import json
 
 import fintecture
 from fintecture import six, util
-from fintecture.fintecture_response import FintectureResponse, FintectureStreamResponse
+from fintecture.fintecture_response import FintectureResponse
 
 
 class RequestMock(object):
@@ -12,9 +12,6 @@ class RequestMock(object):
         self._mocker = mocker
 
         self._real_request = fintecture.api_requestor.APIRequestor.request
-        self._real_request_stream = (
-            fintecture.api_requestor.APIRequestor.request_stream
-        )
         self._stub_request_handler = StubRequestHandler()
 
         self.constructor_patcher = self._mocker.patch(
@@ -29,42 +26,18 @@ class RequestMock(object):
             autospec=True,
         )
 
-        self.request_stream_patcher = self._mocker.patch(
-            "fintecture.api_requestor.APIRequestor.request_stream",
-            side_effect=self._patched_request_stream,
-            autospec=True,
-        )
-
     def _patched_request(self, requestor, method, url, *args, **kwargs):
         response = self._stub_request_handler.get_response(
-            method, url, expect_stream=False
+            method, url
         )
         if response is not None:
-            return response, fintecture.api_key
+            return response, fintecture.app_id
 
         return self._real_request(requestor, method, url, *args, **kwargs)
 
-    def _patched_request_stream(self, requestor, method, url, *args, **kwargs):
-        response = self._stub_request_handler.get_response(
-            method, url, expect_stream=True
-        )
-        if response is not None:
-            return response, fintecture.api_key
-
-        return self._real_request_stream(
-            requestor, method, url, *args, **kwargs
-        )
-
     def stub_request(self, method, url, rbody={}, rcode=200, rheaders={}):
         self._stub_request_handler.register(
-            method, url, rbody, rcode, rheaders, is_streaming=False
-        )
-
-    def stub_request_stream(
-        self, method, url, rbody={}, rcode=200, rheaders={}
-    ):
-        self._stub_request_handler.register(
-            method, url, rbody, rcode, rheaders, is_streaming=True
+            method, url, rbody, rcode, rheaders
         )
 
     def assert_api_base(self, expected_api_base):
@@ -117,11 +90,6 @@ class RequestMock(object):
             self.request_patcher, method, url, params, headers
         )
 
-    def assert_requested_stream(self, method, url, params=None, headers=None):
-        self.assert_requested_internal(
-            self.request_stream_patcher, method, url, params, headers
-        )
-
     def assert_requested_internal(self, patcher, method, url, params, headers):
         params = params or self._mocker.ANY
         headers = headers or self._mocker.ANY
@@ -156,17 +124,8 @@ class RequestMock(object):
             )
             raise AssertionError(msg)
 
-    def assert_no_request_stream(self):
-        if self.request_stream_patcher.call_count != 0:
-            msg = (
-                "Expected 'request_stream' to not have been called. "
-                "Called %s times." % (self.request_stream_patcher.call_count)
-            )
-            raise AssertionError(msg)
-
     def reset_mock(self):
         self.request_patcher.reset_mock()
-        self.request_stream_patcher.reset_mock()
 
 
 class StubRequestHandler(object):
@@ -174,27 +133,20 @@ class StubRequestHandler(object):
         self._entries = {}
 
     def register(
-        self, method, url, rbody={}, rcode=200, rheaders={}, is_streaming=False
+        self, method, url, rbody={}, rcode=200, rheaders={}
     ):
-        self._entries[(method, url)] = (rbody, rcode, rheaders, is_streaming)
+        self._entries[(method, url)] = (rbody, rcode, rheaders)
 
-    def get_response(self, method, url, expect_stream=False):
+    def get_response(self, method, url):
         if (method, url) in self._entries:
-            rbody, rcode, rheaders, is_streaming = self._entries.pop(
+            rbody, rcode, rheaders = self._entries.pop(
                 (method, url)
             )
 
-            if expect_stream != is_streaming:
-                return None
-
             if not isinstance(rbody, six.string_types):
                 rbody = json.dumps(rbody)
-            if is_streaming:
-                fintecture_response = FintectureStreamResponse(
-                    util.io.BytesIO(str.encode(rbody)), rcode, rheaders
-                )
-            else:
-                fintecture_response = FintectureResponse(rbody, rcode, rheaders)
+
+            fintecture_response = FintectureResponse(url, rbody, rcode, rheaders)
             return fintecture_response
 
         return None

@@ -8,14 +8,13 @@ class SearchResultObject(FintectureObject):
     OBJECT_NAME = "search_result"
 
     def search(
-        self, api_key=None, fintecture_version=None, fintecture_account=None, **params
+        self, app_id=None, fintecture_version=None, **params
     ):
         return self._request(
             "get",
             self.get("url"),
-            api_key=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             params=params,
         )
 
@@ -49,13 +48,12 @@ class SearchResultObject(FintectureObject):
 
     @classmethod
     def empty_search_result(
-        cls, api_key=None, fintecture_version=None, fintecture_account=None
+        cls, app_id=None, fintecture_version=None
     ):
         return cls.construct_from(
             {"data": [], "has_more": False, "next_page": None},
-            app_id=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             last_response=None,
         )
 
@@ -64,13 +62,12 @@ class SearchResultObject(FintectureObject):
         return not self.data
 
     def next_search_result_page(
-        self, api_key=None, fintecture_version=None, fintecture_account=None, **params
+        self, app_id=None, fintecture_version=None, **params
     ):
         if not self.has_more:
             return self.empty_search_result(
-                api_key=api_key,
+                app_id=app_id,
                 fintecture_version=fintecture_version,
-                fintecture_account=fintecture_account,
             )
 
         params_with_filters = self._retrieve_params.copy()
@@ -78,8 +75,7 @@ class SearchResultObject(FintectureObject):
         params_with_filters.update(params)
 
         return self.search(
-            api_key=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             **params_with_filters
         )

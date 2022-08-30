@@ -225,14 +225,14 @@ class TestHTTPClient(object):
         client = TestClient()
 
         client.request = mocker.MagicMock(
-            return_value=["", 200, {"Request-Id": "req_123"}]
+            return_value=["", 200, {"X-Request-ID": "req_123"}]
         )
         _, code, _ = client.request_with_retries("get", url, {}, None)
         assert code == 200
         client.request.assert_called_with("get", url, {}, None)
 
         client.request = mocker.MagicMock(
-            return_value=["", 200, {"Request-Id": "req_234"}]
+            return_value=["", 200, {"X-Request-ID": "req_234"}]
         )
         _, code, _ = client.request_with_retries("get", url, {}, None)
         assert code == 200
@@ -240,7 +240,7 @@ class TestHTTPClient(object):
         assert "X-Fintecture-Client-Telemetry" in args[2]
 
         telemetry = json.loads(args[2]["X-Fintecture-Client-Telemetry"])
-        assert telemetry["last_request_metrics"]["request_id"] == "req_123"
+        assert telemetry["last_request_metrics"]["x_request_id"] == "req_123"
 
 
 class ClientTestBase(object):
@@ -255,12 +255,6 @@ class ClientTestBase(object):
     def make_request(self, method, url, headers, post_data):
         client = self.REQUEST_CLIENT(verify_ssl_certs=True)
         return client.request_with_retries(method, url, headers, post_data)
-
-    def make_request_stream(self, method, url, headers, post_data):
-        client = self.REQUEST_CLIENT(verify_ssl_certs=True)
-        return client.request_stream_with_retries(
-            method, url, headers, post_data
-        )
 
     @pytest.fixture
     def mock_response(self):
@@ -283,7 +277,7 @@ class ClientTestBase(object):
     @pytest.fixture
     def check_call(self):
         def check_call(
-            mock, method, abs_url, headers, params, is_streaming=False
+            mock, method, abs_url, headers, params
         ):
             raise NotImplementedError(
                 "You must implement this in your test subclass"
@@ -310,39 +304,6 @@ class ClientTestBase(object):
             assert body == '{"foo": "baz"}'
 
             check_call(request_mock, method, abs_url, data, headers)
-
-    def test_request_stream(
-        self, mocker, request_mock, mock_response, check_call
-    ):
-        for method in VALID_API_METHODS:
-            mock_response(request_mock, "some streamed content", 200)
-
-            abs_url = self.valid_url
-            data = ""
-
-            if method != "post":
-                abs_url = "%s?%s" % (abs_url, data)
-                data = None
-
-            headers = {"my-header": "header val"}
-
-            print(dir(self))
-            print("make_request_stream" in dir(self))
-            stream, code, _ = self.make_request_stream(
-                method, abs_url, headers, data
-            )
-
-            assert code == 200
-
-            # Here we need to convert and align all content on one type (string)
-            # as some clients return a string stream others a byte stream.
-            body_content = stream.read()
-            if hasattr(body_content, "decode"):
-                body_content = body_content.decode("utf-8")
-
-            assert body_content == "some streamed content"
-
-            mocker.resetall()
 
     def test_exception(self, request_mock, mock_error):
         mock_error(request_mock)
@@ -401,7 +362,6 @@ class TestRequestsClient(FintectureClientTestCase, ClientTestBase):
             url,
             post_data,
             headers,
-            is_streaming=False,
             timeout=80,
             times=None,
         ):
@@ -415,9 +375,6 @@ class TestRequestsClient(FintectureClientTestCase, ClientTestBase):
                 "timeout": timeout,
             }
 
-            if is_streaming:
-                kwargs["stream"] = True
-
             calls = [(args, kwargs) for _ in range(times)]
             session.request.assert_has_calls(calls)
 
@@ -429,14 +386,6 @@ class TestRequestsClient(FintectureClientTestCase, ClientTestBase):
         )
         return client.request_with_retries(method, url, headers, post_data)
 
-    def make_request_stream(self, method, url, headers, post_data, timeout=80):
-        client = self.REQUEST_CLIENT(
-            verify_ssl_certs=True, timeout=timeout, proxy="http://slap/"
-        )
-        return client.request_stream_with_retries(
-            method, url, headers, post_data
-        )
-
     def test_timeout(self, request_mock, mock_response, check_call):
         headers = {"my-header": "header val"}
         data = ""
@@ -444,21 +393,6 @@ class TestRequestsClient(FintectureClientTestCase, ClientTestBase):
         self.make_request("POST", self.valid_url, headers, data, timeout=5)
 
         check_call(None, "POST", self.valid_url, data, headers, timeout=5)
-
-    def test_request_stream_forwards_stream_param(
-        self, mocker, request_mock, mock_response, check_call
-    ):
-        mock_response(request_mock, "some streamed content", 200)
-        self.make_request_stream("GET", self.valid_url, {}, None)
-
-        check_call(
-            None,
-            "GET",
-            self.valid_url,
-            None,
-            {},
-            is_streaming=True,
-        )
 
 
 class TestRequestClientRetryBehavior(TestRequestsClient):
@@ -514,7 +448,7 @@ class TestRequestClientRetryBehavior(TestRequestsClient):
     def check_call_numbers(self, check_call):
         valid_url = self.valid_url
 
-        def check_call_numbers(times, is_streaming=False):
+        def check_call_numbers(times):
             check_call(
                 None,
                 "GET",
@@ -522,7 +456,6 @@ class TestRequestClientRetryBehavior(TestRequestsClient):
                 None,
                 {},
                 times=times,
-                is_streaming=is_streaming,
             )
 
         return check_call_numbers
@@ -543,12 +476,6 @@ class TestRequestClientRetryBehavior(TestRequestsClient):
     def make_request(self, *args, **kwargs):
         client = self.make_client()
         return client.request_with_retries("GET", self.valid_url, {}, None)
-
-    def make_request_stream(self, *args, **kwargs):
-        client = self.make_client()
-        return client.request_stream_with_retries(
-            "GET", self.valid_url, {}, None
-        )
 
     def test_retry_error_until_response(
         self, mock_retry, response, check_call_numbers
@@ -586,47 +513,6 @@ class TestRequestClientRetryBehavior(TestRequestsClient):
         _, code, _ = self.make_request()
         assert code == 409
         check_call_numbers(self.max_retries() + 1)
-
-    def test_retry_request_stream_error_until_response(
-        self, mock_retry, response, check_call_numbers
-    ):
-        mock_retry(retry_error_num=1, responses=[response(code=202)])
-        _, code, _ = self.make_request_stream()
-        assert code == 202
-        check_call_numbers(2, is_streaming=True)
-
-    def test_retry_request_stream_error_until_exceeded(
-        self, mock_retry, response, check_call_numbers
-    ):
-        mock_retry(retry_error_num=self.max_retries())
-        with pytest.raises(fintecture.error.APIConnectionError):
-            self.make_request_stream()
-
-        check_call_numbers(self.max_retries(), is_streaming=True)
-
-    def test_no_retry_request_stream_error(
-        self, mock_retry, response, check_call_numbers
-    ):
-        mock_retry(no_retry_error_num=self.max_retries())
-        with pytest.raises(fintecture.error.APIConnectionError):
-            self.make_request_stream()
-        check_call_numbers(1, is_streaming=True)
-
-    def test_retry_request_stream_codes(
-        self, mock_retry, response, check_call_numbers
-    ):
-        mock_retry(responses=[response(code=409), response(code=202)])
-        _, code, _ = self.make_request_stream()
-        assert code == 202
-        check_call_numbers(2, is_streaming=True)
-
-    def test_retry_request_stream_codes_until_exceeded(
-        self, mock_retry, response, check_call_numbers
-    ):
-        mock_retry(responses=[response(code=409)] * (self.max_retries() + 1))
-        _, code, _ = self.make_request_stream()
-        assert code == 409
-        check_call_numbers(self.max_retries() + 1, is_streaming=True)
 
     @pytest.fixture
     def connection_error(self, session):
@@ -705,7 +591,7 @@ class TestUrlFetchClient(FintectureClientTestCase, ClientTestBase):
     @pytest.fixture
     def check_call(self):
         def check_call(
-            mock, method, url, post_data, headers, is_streaming=False
+            mock, method, url, post_data, headers
         ):
             mock.fetch.assert_called_with(
                 url=url,
@@ -729,12 +615,6 @@ class TestUrllib2Client(FintectureClientTestCase, ClientTestBase):
     def make_request(self, method, url, headers, post_data, proxy=None):
         self.make_client(proxy)
         return self.client.request_with_retries(
-            method, url, headers, post_data
-        )
-
-    def make_request_stream(self, method, url, headers, post_data, proxy=None):
-        self.make_client(proxy)
-        return self.client.request_stream_with_retries(
             method, url, headers, post_data
         )
 
@@ -773,7 +653,7 @@ class TestUrllib2Client(FintectureClientTestCase, ClientTestBase):
     @pytest.fixture
     def check_call(self):
         def check_call(
-            mock, method, url, post_data, headers, is_streaming=False
+            mock, method, url, post_data, headers
         ):
             if six.PY3 and isinstance(post_data, six.string_types):
                 post_data = post_data.encode("utf-8")
@@ -804,24 +684,10 @@ class TestUrllib2ClientHttpsProxy(TestUrllib2Client):
             {"http": "http://slap/", "https": "http://slap/"},
         )
 
-    def make_request_stream(self, method, url, headers, post_data, proxy=None):
-        return super(TestUrllib2ClientHttpsProxy, self).make_request_stream(
-            method,
-            url,
-            headers,
-            post_data,
-            {"http": "http://slap/", "https": "http://slap/"},
-        )
-
 
 class TestUrllib2ClientHttpProxy(TestUrllib2Client):
     def make_request(self, method, url, headers, post_data, proxy=None):
         return super(TestUrllib2ClientHttpProxy, self).make_request(
-            method, url, headers, post_data, "http://slap/"
-        )
-
-    def make_request_stream(self, method, url, headers, post_data, proxy=None):
-        return super(TestUrllib2ClientHttpProxy, self).make_request_stream(
             method, url, headers, post_data, "http://slap/"
         )
 
@@ -836,12 +702,6 @@ class TestPycurlClient(FintectureClientTestCase, ClientTestBase):
     def make_request(self, method, url, headers, post_data, proxy=None):
         self.make_client(proxy)
         return self.client.request_with_retries(
-            method, url, headers, post_data
-        )
-
-    def make_request_stream(self, method, url, headers, post_data, proxy=None):
-        self.make_client(proxy)
-        return self.client.request_stream_with_retries(
             method, url, headers, post_data
         )
 
@@ -889,7 +749,7 @@ class TestPycurlClient(FintectureClientTestCase, ClientTestBase):
     @pytest.fixture
     def check_call(self, request_mocks):
         def check_call(
-            mock, method, url, post_data, headers, is_streaming=False
+            mock, method, url, post_data, headers
         ):
             lib_mock = request_mocks[self.REQUEST_CLIENT.name]
 
@@ -938,28 +798,10 @@ class TestPycurlClientHttpProxy(TestPycurlClient):
             "http://user:withPwd@slap:8888/",
         )
 
-    def make_request_stream(self, method, url, headers, post_data, proxy=None):
-        return super(TestPycurlClientHttpProxy, self).make_request_stream(
-            method,
-            url,
-            headers,
-            post_data,
-            "http://user:withPwd@slap:8888/",
-        )
-
 
 class TestPycurlClientHttpsProxy(TestPycurlClient):
     def make_request(self, method, url, headers, post_data, proxy=None):
         return super(TestPycurlClientHttpsProxy, self).make_request(
-            method,
-            url,
-            headers,
-            post_data,
-            {"http": "http://slap:8888/", "https": "http://slap2:444/"},
-        )
-
-    def make_request_stream(self, method, url, headers, post_data, proxy=None):
-        return super(TestPycurlClientHttpsProxy, self).make_request_stream(
             method,
             url,
             headers,

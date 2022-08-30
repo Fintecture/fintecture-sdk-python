@@ -24,10 +24,10 @@ if fintecture.access_token is None:
 else:
     print("Using access token: %s" % fintecture.access_token)
 
-redirect_uri = "https://domain.com"
+redirect_uri = "https://yourdomain.com"
 print("Doing a request for payout call with redirection URL to %s..." % redirect_uri)
 
-resp_request_for_payout = fintecture.PIS.request_to_payout(
+resp_request_for_payout = fintecture.PIS.request_for_payout(
     redirect_uri,
     language='es',
     state='85321',
@@ -90,26 +90,6 @@ resp_request_to_pay = fintecture.PIS.request_to_pay(
 )
 
 print("Success: %r" % (resp_request_to_pay))
-
-# We are receiving an invalid response with HTTP with 500 of status code:
-#
-# fintecture.error.APIError: Invalid response object from API:
-# '{
-#   "status":"500",
-#   "code":"internal_server_error",
-#   "log_id":"b9bef7a8-0981-46da-8317-f0d1d2b7984b",
-#   "errors":[
-#       {
-#           "code":"request_to_pay_unsuccessful",
-#           "title":"Internal Error",
-#           "detail":"The request to pay initiation has been unsuccessful"
-#       }
-#   ]
-# }'
-# (HTTP response code was 500)
-#
-# This error is received when the value of "redirect_uri" param is not
-# registered inside Developer Console of Fintecture Application.
 
 # after connecting with above URL we receive data from callback redirected URI as bellow
 # session_id        fee8b638c1c44af1a4a2dd7dd781ecf8

@@ -113,18 +113,11 @@ class HTTPClient(object):
 
     def request_with_retries(self, method, url, headers, post_data=None):
         return self._request_with_retries_internal(
-            method, url, headers, post_data, is_streaming=False
-        )
-
-    def request_stream_with_retries(
-        self, method, url, headers, post_data=None
-    ):
-        return self._request_with_retries_internal(
-            method, url, headers, post_data, is_streaming=True
+            method, url, headers, post_data
         )
 
     def _request_with_retries_internal(
-        self, method, url, headers, post_data, is_streaming
+        self, method, url, headers, post_data
     ):
         self._add_telemetry_header(headers)
 
@@ -134,12 +127,7 @@ class HTTPClient(object):
             request_start = _now_ms()
 
             try:
-                if is_streaming:
-                    response = self.request_stream(
-                        method, url, headers, post_data
-                    )
-                else:
-                    response = self.request(method, url, headers, post_data)
+                response = self.request(method, url, headers, post_data)
                 connection_error = None
             except error.APIConnectionError as e:
                 connection_error = e
@@ -172,11 +160,6 @@ class HTTPClient(object):
     def request(self, method, url, headers, post_data=None):
         raise NotImplementedError(
             "HTTPClient subclasses must implement `request`"
-        )
-
-    def request_stream(self, method, url, headers, post_data=None):
-        raise NotImplementedError(
-            "HTTPClient subclasses must implement `request_stream`"
         )
 
     def _should_retry(self, response, api_connection_error, num_retries):
@@ -271,11 +254,11 @@ class HTTPClient(object):
 
     def _record_request_metrics(self, response, request_start):
         _, _, rheaders = response
-        if "Request-Id" in rheaders and fintecture.enable_telemetry:
-            request_id = rheaders["Request-Id"]
+        if "X-Request-ID" in rheaders and fintecture.enable_telemetry:
+            x_request_id = rheaders["X-Request-ID"]
             request_duration_ms = _now_ms() - request_start
             self._thread_local.last_request_metrics = RequestMetrics(
-                request_id, request_duration_ms
+                x_request_id, request_duration_ms
             )
 
     def close(self):
@@ -294,15 +277,10 @@ class RequestsClient(HTTPClient):
 
     def request(self, method, url, headers, post_data=None):
         return self._request_internal(
-            method, url, headers, post_data, is_streaming=False
+            method, url, headers, post_data
         )
 
-    def request_stream(self, method, url, headers, post_data=None):
-        return self._request_internal(
-            method, url, headers, post_data, is_streaming=True
-        )
-
-    def _request_internal(self, method, url, headers, post_data, is_streaming):
+    def _request_internal(self, method, url, headers, post_data):
         kwargs = {}
         if self._verify_ssl_certs:
             kwargs["verify"] = fintecture.ca_bundle_path
@@ -311,9 +289,6 @@ class RequestsClient(HTTPClient):
 
         if self._proxy:
             kwargs["proxies"] = self._proxy
-
-        if is_streaming:
-            kwargs["stream"] = True
 
         if getattr(self._thread_local, "session", None) is None:
             self._thread_local.session = self._session or requests.Session()
@@ -338,13 +313,10 @@ class RequestsClient(HTTPClient):
                     "underlying error was: %s" % (e,)
                 )
 
-            if is_streaming:
-                content = result.raw
-            else:
-                # This causes the content to actually be read, which could cause
-                # e.g. a socket timeout. TODO: The other fetch methods probably
-                # are susceptible to the same and should be updated.
-                content = result.content
+            # This causes the content to actually be read, which could cause
+            # e.g. a socket timeout. TODO: The other fetch methods probably
+            # are susceptible to the same and should be updated.
+            content = result.content
 
             status_code = result.status_code
         except Exception as e:
@@ -433,15 +405,10 @@ class UrlFetchClient(HTTPClient):
 
     def request(self, method, url, headers, post_data=None):
         return self._request_internal(
-            method, url, headers, post_data, is_streaming=False
+            method, url, headers, post_data
         )
 
-    def request_stream(self, method, url, headers, post_data=None):
-        return self._request_internal(
-            method, url, headers, post_data, is_streaming=True
-        )
-
-    def _request_internal(self, method, url, headers, post_data, is_streaming):
+    def _request_internal(self, method, url, headers, post_data):
         try:
             result = urlfetch.fetch(
                 url=url,
@@ -457,10 +424,7 @@ class UrlFetchClient(HTTPClient):
         except urlfetch.Error as e:
             self._handle_request_error(e, url)
 
-        if is_streaming:
-            content = util.io.BytesIO(str.encode(result.content))
-        else:
-            content = result.content
+        content = result.content
 
         return content, result.status_code, result.headers
 
@@ -521,15 +485,10 @@ class PycurlClient(HTTPClient):
 
     def request(self, method, url, headers, post_data=None):
         return self._request_internal(
-            method, url, headers, post_data, is_streaming=False
+            method, url, headers, post_data
         )
 
-    def request_stream(self, method, url, headers, post_data=None):
-        return self._request_internal(
-            method, url, headers, post_data, is_streaming=True
-        )
-
-    def _request_internal(self, method, url, headers, post_data, is_streaming):
+    def _request_internal(self, method, url, headers, post_data):
         b = util.io.BytesIO()
         rheaders = util.io.BytesIO()
 
@@ -583,11 +542,7 @@ class PycurlClient(HTTPClient):
         except pycurl.error as e:
             self._handle_request_error(e)
 
-        if is_streaming:
-            b.seek(0)
-            rcontent = b
-        else:
-            rcontent = b.getvalue().decode("utf-8")
+        rcontent = b.getvalue().decode("utf-8")
 
         rcode = self._curl.getinfo(pycurl.RESPONSE_CODE)
         headers = self.parse_headers(rheaders.getvalue().decode("utf-8"))
@@ -653,15 +608,10 @@ class Urllib2Client(HTTPClient):
 
     def request(self, method, url, headers, post_data=None):
         return self._request_internal(
-            method, url, headers, post_data, is_streaming=False
+            method, url, headers, post_data
         )
 
-    def request_stream(self, method, url, headers, post_data=None):
-        return self._request_internal(
-            method, url, headers, post_data, is_streaming=True
-        )
-
-    def _request_internal(self, method, url, headers, post_data, is_streaming):
+    def _request_internal(self, method, url, headers, post_data):
         if six.PY3 and isinstance(post_data, six.string_types):
             post_data = post_data.encode("utf-8")
 
@@ -679,10 +629,7 @@ class Urllib2Client(HTTPClient):
                 else urllib.request.urlopen(req)
             )
 
-            if is_streaming:
-                rcontent = response
-            else:
-                rcontent = response.read()
+            rcontent = response.read()
 
             rcode = response.code
             headers = dict(response.info())

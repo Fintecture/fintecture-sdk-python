@@ -14,10 +14,10 @@ from email import utils as email_utils
 import fintecture
 
 from fintecture import crypto
-from fintecture import error, oauth_error, http_client, version, util, six
+from fintecture import error, http_client, version, util, six
 from fintecture.multipart_data_generator import MultipartDataGenerator
 from fintecture.six.moves.urllib.parse import urlparse, urlencode, urlsplit, urlunsplit
-from fintecture.fintecture_response import FintectureResponse, FintectureStreamResponse
+from fintecture.fintecture_response import FintectureResponse
 from fintecture.constants import SIGNED_HEADER_PARAMETER_LIST
 
 
@@ -81,7 +81,6 @@ class APIRequestor(object):
         client=None,
         api_base=None,
         api_version=None,
-        account=None,
     ):
         self.api_base = api_base or APIRequestor.api_base()
 
@@ -90,7 +89,6 @@ class APIRequestor(object):
         self.private_key = private_key
 
         self.api_version = api_version or fintecture.api_version
-        self.fintecture_account = account
 
         self._default_proxy = None
 
@@ -144,179 +142,140 @@ class APIRequestor(object):
         return str
 
     def request(self, method, url, params=None, headers=None):
-        rbody, rcode, rheaders, my_app_id = self.request_raw(
-            method.lower(), url, params, headers, is_streaming=False
+        rbody, rcode, rheaders, url, my_app_id = self.request_raw(
+            method.lower(), url, params, headers
         )
-        resp = self.interpret_response(rbody, rcode, rheaders)
+        resp = self.interpret_response(url, rbody, rcode, rheaders)
         return resp, my_app_id
 
-    def request_stream(self, method, url, params=None, headers=None):
-        stream, rcode, rheaders, my_app_id = self.request_raw(
-            method.lower(), url, params, headers, is_streaming=True
-        )
-        resp = self.interpret_streaming_response(stream, rcode, rheaders)
-        return resp, my_app_id
-
-    def handle_error_response(self, rbody, rcode, resp, rheaders):
+    def handle_error_response(self, url, rbody, rcode, resp, rheaders):
         try:
-            error_data = resp["errors"]
+            errors = resp['errors']
         except (KeyError, TypeError):
             raise error.APIError(
-                "Invalid response object from API: %r (HTTP response code "
-                "was %d)" % (rbody, rcode),
-                rbody,
-                rcode,
-                resp,
+                message="Invalid response object from API: %r "
+                        "(HTTP response code was %d)" % (rbody, rcode),
+                url=url,
+                http_body=rbody,
+                http_status=rcode,
+                headers=rheaders,
+                json_body=resp,
             )
 
-        err = None
-
-        # OAuth errors are a JSON object where `error` is a string. In
-        # contrast, in API errors, `error` is a hash with sub-keys. We use
-        # this property to distinguish between OAuth and API errors.
-        if isinstance(error_data, six.string_types):
-            err = self.specific_oauth_error(
-                rbody, rcode, resp, rheaders, error_data
-            )
-            raise err
-
-        if err is None:
-            err = self.specific_api_error(
-                rbody, rcode, resp, rheaders, error_data
-            )
-
-        raise error.APIError(
-            "Invalid response object from API: %r (HTTP response code "
-            "was %d)" % (rbody, rcode),
-            rbody,
-            rcode,
-            resp,
+        err = self.specific_api_error(
+            url, rbody, rcode, resp, rheaders, errors
         )
 
-    def specific_api_error(self, rbody, rcode, resp, rheaders, error_data):
+        if err is not None:
+            raise err
 
-        # only raise exception with the first error notified
-        if isinstance(error_data, list) and len(error_data) > 0:
-            error_data = error_data[0]
+        raise error.APIError(
+            message="Invalid response object from API: %r "
+                    "(HTTP response code was %d)" % (rbody, rcode),
+            url=url,
+            http_body=rbody,
+            http_status=rcode,
+            headers=rheaders,
+            json_body=resp,
+        )
 
-        code = error_data.get("code")
-        title = error_data.get("title")
-        detail = error_data.get("detail")
-        message = error_data.get("message")
+    def specific_api_error(self, url, rbody, rcode, resp, rheaders, error_data):
+
+        status = resp['status']
+        code = resp['code']
 
         util.log_info(
             "Fintecture API error received",
-            error_code=code,
-            error_title=title,
-            error_message=message,
-            error_detail=detail,
+            code=code,
+            status=status,
+            errors=error_data,
         )
 
-        # Rate limits were previously coded as 400's with code 'rate_limit'
-        if rcode == 429 or (rcode == 400 and code == "rate_limit"):
-            return error.RateLimitError(
-                detail, rbody, rcode, resp, rheaders
-            )
-        elif rcode in [400, 404]:
-            if error_data.get("type") == "idempotency_error":
-                return error.IdempotencyError(
-                    detail, rbody, rcode, resp, rheaders
-                )
-            else:
-                return error.InvalidRequestError(
-                    title,
-                    detail,
-                    code,
-                    rbody,
-                    rcode,
-                    resp,
-                    rheaders,
-                )
-        elif rcode == 401:
-            return error.AuthenticationError(
-                message, rbody, rcode, resp, rheaders
-            )
-        elif rcode == 402:
-            return error.CardError(
-                title,
-                detail,
-                code,
-                rbody,
-                rcode,
-                resp,
-                rheaders,
-            )
+        args = [url, rbody, rcode, resp, rheaders, code]
+
+        if rcode == 400 and code == 'bad_request':
+            bad_errors = [
+                {
+                    'bad_request': 'Invalid parameters or malformed syntax.',
+                    'customer_unknown': 'Invalid customer_id. '
+                                        'Use a valid customer_id or authenticate to a bank to continue.',
+                    'account_unknown': 'Invalid account_id. '
+                                       'You must specify an account_id as defined by the /accounts API.',
+                    'session_id_invalid_or_expired': 'The session ID used is either expired or invalid.',
+                    'invalid_field': 'The value or format of field [field] is incorrect',
+                    'mandatory_field_missing': 'The mandatory field is missing: [field] has not been defined.',
+                    'invalid_debited_account': 'Invalid debited_account_id. '
+                                               'The debited_account_type is set to internal, '
+                                               'please use an id provider by the accounts API.',
+                }
+            ]
+            message = "Some general information about the error could be one of [%r]. " \
+                      "More details in specific errors." % bad_errors
+            args.insert(0, message)
+            return error.BadRequestError(*args)
+
+        elif rcode == 401 and code == 'unauthorized':
+            authorization_errors = [
+                {
+                    'invalid_token': 'The token is either invalid or expired.',
+                    'invalid_scopes': 'Your app does not have the necessary scopes to access this API.',
+                    'invalid_code': 'The authorization code is either wrong or expired.',
+                    'invalid_app_id': 'Invalid app_id.',
+                    'invalid_app_url': 'Invalid app redirect URL.',
+                }
+            ]
+            message = "Some general information about the error could be one of [%r]. " \
+                      "More details in specific errors." % authorization_errors
+            args.insert(0, message)
+            return error.AuthorizationError(*args)
+
         elif rcode == 403:
-            return error.PermissionError(
-                title, rbody, rcode, resp, rheaders
-            )
+            args.insert(0, 'Some resource could not be accessed.')
+            return error.PermissionError(*args)
+
+        elif rcode == 404 and code == 'not_found':
+            message = 'The requested resource could not be found. ' \
+                      'The requested resource either does not exist or is temporarily down'
+            args.insert(0, message)
+            return error.NotFoundError(*args)
+
+        elif rcode == 429 and code == 'too_many_requests':
+            message = 'The user has sent too many requests in a given amount of time.'
+            args.insert(0, message)
+            return error.TooManyRequestsError(*args)
+
+        elif rcode == 500 and code == 'internal_server_error':
+            message = 'An internal error has occurred. If the error persists, please contact our support.'
+            args.insert(0, message)
+            return error.InternalServerError(*args)
+
+        elif rcode == 503 and code == 'service_unavailable':
+            message = 'The provider is currently unavailable. Please try again later.'
+            args.insert(0, message)
+            return error.ServiceUnavailableError(*args)
+
         else:
-            return error.APIError(
-                title, rbody, rcode, resp, rheaders
-            )
+            args.insert(0, 'An unknown error occur. Please, see error details.')
+            return error.APIError(*args)
 
-    def specific_oauth_error(self, rbody, rcode, resp, rheaders, error_code):
-        description = resp.get("error_description", error_code)
+    def request_headers(self, app_id, method, url, access_token=None, private_key=None, body=None,
+                        supplied_headers=None):
 
-        util.log_info(
-            "Fintecture OAuth error received",
-            error_code=error_code,
-            error_description=description,
-        )
-
-        args = [error_code, description, rbody, rcode, resp, rheaders]
-
-        if error_code == "invalid_client":
-            return oauth_error.InvalidClientError(*args)
-        elif error_code == "invalid_grant":
-            return oauth_error.InvalidGrantError(*args)
-        elif error_code == "invalid_request":
-            return oauth_error.InvalidRequestError(*args)
-        elif error_code == "invalid_scope":
-            return oauth_error.InvalidScopeError(*args)
-        elif error_code == "unsupported_grant_type":
-            return oauth_error.UnsupportedGrantTypError(*args)
-        elif error_code == "unsupported_response_type":
-            return oauth_error.UnsupportedResponseTypError(*args)
-
-        return None
-
-    def request_headers(self, app_id, method, url, access_token=None, private_key=None, body=None):
-        user_agent = "Fintecture/v1 PythonBindings/%s" % (version.VERSION,)
+        api_version = self.api_version or 'v1'
+        user_agent = "Fintecture/%s PythonBindings/%s" % (api_version, version.VERSION,)
         if fintecture.app_info:
             user_agent += " " + self.format_app_info(fintecture.app_info)
 
-        # ua = {
-        #     "bindings_version": version.VERSION,
-        #     "lang": "python",
-        #     "publisher": "fintecture",
-        #     "httplib": self._client.name,
-        # }
-        # for attr, func in [
-        #     ["lang_version", platform.python_version],
-        #     ["platform", platform.platform],
-        #     ["uname", lambda: " ".join(platform.uname())],
-        # ]:
-        #     try:
-        #         val = func()
-        #     except Exception:
-        #         val = "(disabled)"
-        #     ua[attr] = val
-        # if fintecture.app_info:
-        #     ua["application"] = fintecture.app_info
-
         headers = {
-            # "X-Fintecture-Client-User-Agent": json.dumps(ua),
             "User-Agent": user_agent,
             "Accept": "application/json",
         }
 
-        # if self.fintecture_account:
-        #     headers["Fintecture-Account"] = self.fintecture_account
-
         if method == "post":
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-            headers.setdefault("Idempotency-Key", str(uuid.uuid4()))
+            if supplied_headers is None:
+                headers["Content-Type"] = "application/x-www-form-urlencoded"
+            elif supplied_headers.get('Content-Type', False):
+                headers["Content-Type"] = supplied_headers.get('Content-Type')
 
         if self.api_version is not None:
             headers["Fintecture-Version"] = self.api_version
@@ -329,7 +288,7 @@ class APIRequestor(object):
 
         if private_key:
             payload = ''
-            if type(body) == 'str':
+            if isinstance(body, str):
                 payload = body
             elif isinstance(body, dict):
                 payload = json.dumps(body, separators=(',', ':'))
@@ -357,7 +316,6 @@ class APIRequestor(object):
         url,
         params=None,
         supplied_headers=None,
-        is_streaming=False,
     ):
         """
         Mechanism for issuing an API call
@@ -421,13 +379,13 @@ class APIRequestor(object):
                 and supplied_headers.get("Content-Type")
                 == "application/json"
             ):
-                post_data = json.dumps(params)
+                post_data = json.dumps(params, separators=(',', ':'))
             else:
                 post_data = encoded_params
         else:
             raise error.APIConnectionError(
-                "Unrecognized HTTP method %r.  This may indicate a bug in the "
-                "Fintecture bindings.  Please contact contact@fintecture.com for "
+                "Unrecognized HTTP method %r. This may indicate a bug in the "
+                "Fintecture bindings. Please contact contact@fintecture.com for "
                 "assistance." % (method,)
             )
 
@@ -436,74 +394,45 @@ class APIRequestor(object):
             for key, value in six.iteritems(supplied_headers):
                 headers[key] = value
 
-        util.log_info("Request to Fintecture api", method=method, path=abs_url)
+        util.log_info("Request to Fintecture API", method=method, path=abs_url)
         util.log_debug(
             "Post details",
+            headers=headers,
             post_data=encoded_params,
-            api_version=self.api_version,
         )
 
-        if is_streaming:
-            (
-                rcontent,
-                rcode,
-                rheaders,
-            ) = self._client.request_stream_with_retries(
-                method, abs_url, headers, post_data
-            )
-        else:
-            rcontent, rcode, rheaders = self._client.request_with_retries(
-                method, abs_url, headers, post_data
-            )
+        rcontent, rcode, rheaders = self._client.request_with_retries(
+            method, abs_url, headers, post_data
+        )
 
         util.log_info("Fintecture API response", path=abs_url, response_code=rcode)
-        util.log_debug("API response body", body=rcontent)
+        util.log_debug(
+            "API response details",
+            headers=rheaders,
+            body=rcontent,
+        )
 
-        if "Request-Id" in rheaders:
-            request_id = rheaders["Request-Id"]
-            util.log_debug(
-                "Dashboard link for request",
-                link=util.dashboard_link(request_id),
-            )
-
-        return rcontent, rcode, rheaders, my_app_id
+        return rcontent, rcode, rheaders, url, my_app_id
 
     def _should_handle_code_as_error(self, rcode):
         return not 200 <= rcode < 300
 
-    def interpret_response(self, rbody, rcode, rheaders):
+    def interpret_response(self, url, rbody, rcode, rheaders):
         try:
             if hasattr(rbody, "decode"):
                 rbody = rbody.decode("utf-8")
-            resp = FintectureResponse(rbody, rcode, rheaders)
+            resp = FintectureResponse(url, rbody, rcode, rheaders)
         except Exception as e:
             raise error.APIError(
-                "Invalid response body from API: %s "
+                message="Invalid response body from API: %s "
                 "(HTTP response code was %d)" % (rbody, rcode),
-                rbody,
-                rcode,
-                rheaders,
+                url=url,
+                http_body=rbody,
+                http_status=rcode,
+                headers=rheaders,
             )
+
         if self._should_handle_code_as_error(rcode):
-            self.handle_error_response(rbody, rcode, resp.data, rheaders)
+            self.handle_error_response(url, rbody, rcode, resp.data, rheaders)
+
         return resp
-
-    def interpret_streaming_response(self, stream, rcode, rheaders):
-        # Streaming response are handled with minimal processing for the success
-        # case (ie. we don't want to read the content). When an error is
-        # received, we need to read from the stream and parse the received JSON,
-        # treating it like a standard JSON response.
-        if self._should_handle_code_as_error(rcode):
-            if hasattr(stream, "getvalue"):
-                json_content = stream.getvalue()
-            elif hasattr(stream, "read"):
-                json_content = stream.read()
-            else:
-                raise NotImplementedError(
-                    "HTTP client %s does not return an IOBase object which "
-                    "can be consumed when streaming a response."
-                )
-
-            return self.interpret_response(json_content, rcode, rheaders)
-        else:
-            return FintectureStreamResponse(stream, rcode, rheaders)

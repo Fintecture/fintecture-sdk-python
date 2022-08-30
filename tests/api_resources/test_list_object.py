@@ -21,13 +21,12 @@ class TestListObject(object):
             {"object": "list", "data": [{"object": "charge", "foo": "bar"}]},
         )
 
-        res = list_object.list(myparam="you", fintecture_account="acct_123")
+        res = list_object.list(myparam="you")
 
         request_mock.assert_requested(
             "get", "/my/path", {"myparam": "you"}, None
         )
         assert isinstance(res, fintecture.ListObject)
-        assert res.fintecture_account == "acct_123"
         assert isinstance(res.data, list)
         assert isinstance(res.data[0], fintecture.Charge)
         assert res.data[0].foo == "bar"
@@ -37,24 +36,23 @@ class TestListObject(object):
             "post", "/my/path", {"object": "charge", "foo": "bar"}
         )
 
-        res = list_object.create(myparam="eter", fintecture_account="acct_123")
+        res = list_object.create(myparam="eter")
 
         request_mock.assert_requested(
             "post", "/my/path", {"myparam": "eter"}, None
         )
         assert isinstance(res, fintecture.Charge)
         assert res.foo == "bar"
-        assert res.fintecture_account == "acct_123"
 
     def test_create_maintains_list_properties(self, request_mock, list_object):
         # Testing with real requests because our mock makes it impossible to
         # test otherwise
-        charge = fintecture.Charge.retrieve("ch_123", api_key="sk_test_custom")
+        charge = fintecture.Charge.retrieve("ch_123", app_id="test_custom")
         res = charge.refunds.create(amount=123)
         request_mock.assert_requested(
             "post", "/v1/charges/ch_123/refunds", {"amount": 123}, None
         )
-        assert res.api_key == "sk_test_custom"
+        assert res.app_id == "test_custom"
 
     def test_retrieve(self, request_mock, list_object):
         request_mock.stub_request(
@@ -62,7 +60,7 @@ class TestListObject(object):
         )
 
         res = list_object.retrieve(
-            "myid", myparam="cow", fintecture_account="acct_123"
+            "myid", myparam="cow"
         )
 
         request_mock.assert_requested(
@@ -70,7 +68,6 @@ class TestListObject(object):
         )
         assert isinstance(res, fintecture.Charge)
         assert res.foo == "bar"
-        assert res.fintecture_account == "acct_123"
 
     def test_is_empty(self):
         lo = fintecture.ListObject.construct_from({"data": []}, None)

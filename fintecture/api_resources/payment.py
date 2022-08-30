@@ -32,7 +32,8 @@ class Payment(
     def connect(cls, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: A state parameter which will be provided back on redirection."
+                message="state: A state parameter which will be provided back on redirection.",
+                param='state',
             )
         state = params.get('state')
         del params['state']
@@ -51,7 +52,8 @@ class Payment(
     def initiate(cls, provider_id, redirect_uri, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: A state parameter which will be provided back on redirection."
+                message="state: A state parameter which will be provided back on redirection.",
+                param='state',
             )
         state = params.get('state')
         del params['state']
@@ -89,7 +91,9 @@ class Payment(
         session_id = self.get('data', {}).get('id', {})
         if not params.get('status', False):
             raise error.InvalidRequestError(
-                "status: is a parameter for update payment attributes and only accepts 'payment_cancelled' value"
+                message="status: is a parameter for update payment attributes and "
+                        "only accepts 'payment_cancelled' value",
+                param='status'
             )
         status = params.get('status')
         del params['status']

@@ -12,7 +12,7 @@ class TestDeletableAPIResource(object):
             "delete",
             "/v1/mydeletables/mid",
             {"id": "mid", "deleted": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyDeletable.delete("mid")
@@ -22,14 +22,14 @@ class TestDeletableAPIResource(object):
         assert obj.id == "mid"
 
         assert obj.last_response is not None
-        assert obj.last_response.request_id == "req_id"
+        assert obj.last_response.x_request_id == "req_id"
 
     def test_delete_class_with_object(self, request_mock):
         request_mock.stub_request(
             "delete",
             "/v1/mydeletables/mid",
             {"id": "mid", "deleted": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyDeletable.construct_from({"id": "mid"}, "mykey")
@@ -41,14 +41,14 @@ class TestDeletableAPIResource(object):
         assert obj.id == "mid"
 
         assert obj.last_response is not None
-        assert obj.last_response.request_id == "req_id"
+        assert obj.last_response.x_request_id == "req_id"
 
     def test_delete_instance(self, request_mock):
         request_mock.stub_request(
             "delete",
             "/v1/mydeletables/mid",
             {"id": "mid", "deleted": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyDeletable.construct_from({"id": "mid"}, "mykey")
@@ -59,22 +59,20 @@ class TestDeletableAPIResource(object):
         assert obj.id == "mid"
 
         assert obj.last_response is not None
-        assert obj.last_response.request_id == "req_id"
+        assert obj.last_response.x_request_id == "req_id"
 
     def test_delete_with_all_special_fields(self, request_mock):
         request_mock.stub_request(
             "delete",
             "/v1/mydeletables/foo",
             {"id": "foo", "bobble": "new_scrobble"},
-            {"Idempotency-Key": "IdempotencyKey"},
+            {},
         )
 
         self.MyDeletable.delete(
             "foo",
             fintecture_version="2017-08-15",
-            api_key="APIKEY",
-            idempotency_key="IdempotencyKey",
-            fintecture_account="Acc",
+            app_id="APP_ID",
             bobble="new_scrobble",
         )
 
@@ -82,6 +80,5 @@ class TestDeletableAPIResource(object):
             "delete",
             "/v1/mydeletables/foo",
             {"bobble": "new_scrobble"},
-            {"Idempotency-Key": "IdempotencyKey"},
         )
         request_mock.assert_api_version("2017-08-15")

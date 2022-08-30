@@ -20,9 +20,8 @@ class Charge(
     def _cls_capture(
         cls,
         charge,
-        api_key=None,
+        app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         **params
     ):
         return cls._static_request(
@@ -30,20 +29,18 @@ class Charge(
             "/v1/charges/{charge}/capture".format(
                 charge=util.sanitize_id(charge)
             ),
-            api_key=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             params=params,
         )
 
     @util.class_method_variant("_cls_capture")
-    def capture(self, idempotency_key=None, **params):
+    def capture(self, **params):
         return self._request(
             "post",
             "/v1/charges/{charge}/capture".format(
                 charge=util.sanitize_id(self.get("id"))
             ),
-            idempotency_key=idempotency_key,
             params=params,
         )
 
@@ -55,16 +52,16 @@ class Charge(
     def search_auto_paging_iter(cls, *args, **kwargs):
         return cls.search(*args, **kwargs).auto_paging_iter()
 
-    def mark_as_fraudulent(self, idempotency_key=None):
+    def mark_as_fraudulent(self):
         params = {"fraud_details": {"user_report": "fraudulent"}}
         url = self.instance_url()
-        headers = util.populate_headers(idempotency_key)
+        headers = {}
         self.refresh_from(self.request("post", url, params, headers))
         return self
 
-    def mark_as_safe(self, idempotency_key=None):
+    def mark_as_safe(self):
         params = {"fraud_details": {"user_report": "safe"}}
         url = self.instance_url()
-        headers = util.populate_headers(idempotency_key)
+        headers = {}
         self.refresh_from(self.request("post", url, params, headers))
         return self

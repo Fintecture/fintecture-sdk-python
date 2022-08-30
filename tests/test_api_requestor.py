@@ -10,7 +10,7 @@ import pytest
 
 import fintecture
 from fintecture import six, util
-from fintecture.fintecture_response import FintectureResponse, FintectureStreamResponse
+from fintecture.fintecture_response import FintectureResponse
 
 from fintecture.six.moves.urllib.parse import urlsplit
 
@@ -37,24 +37,22 @@ class APIHeaderMatcher(object):
         "User-Agent",
         "X-Fintecture-Client-User-Agent",
     ]
-    METHOD_EXTRA_KEYS = {"post": ["Content-Type", "Idempotency-Key"]}
+    METHOD_EXTRA_KEYS = {"post": ["Content-Type"]}
 
     def __init__(
         self,
-        api_key=None,
+        app_id=None,
         extra={},
         request_method=None,
         user_agent=None,
         app_info=None,
-        idempotency_key=None,
         fail_platform_call=False,
     ):
         self.request_method = request_method
-        self.api_key = api_key or fintecture.api_key
+        self.app_id = app_id or fintecture.app_id
         self.extra = extra
         self.user_agent = user_agent
         self.app_info = app_info
-        self.idempotency_key = idempotency_key
         self.fail_platform_call = fail_platform_call
 
     def __eq__(self, other):
@@ -64,18 +62,16 @@ class APIHeaderMatcher(object):
             and self._user_agent_match(other)
             and self._x_fintecture_ua_contains_app_info(other)
             and self._x_fintecture_ua_handles_failed_platform_function(other)
-            and self._idempotency_key_match(other)
             and self._extra_match(other)
         )
 
     def __repr__(self):
-        return "APIHeaderMatcher(request_method=%s, api_key=%s, extra=%s, " "user_agent=%s, app_info=%s, idempotency_key=%s, fail_platform_call=%s)" % (
+        return "APIHeaderMatcher(request_method=%s, app_id=%s, extra=%s, user_agent=%s, app_info=%s, fail_platform_call=%s)" % (
             repr(self.request_method),
-            repr(self.api_key),
+            repr(self.app_id),
             repr(self.extra),
             repr(self.user_agent),
             repr(self.app_info),
-            repr(self.idempotency_key),
             repr(self.fail_platform_call),
         )
 
@@ -89,17 +85,12 @@ class APIHeaderMatcher(object):
         return sorted(other.keys()) == sorted(expected_keys)
 
     def _auth_match(self, other):
-        return other["Authorization"] == "Bearer %s" % (self.api_key,)
+        return other["Authorization"] == "Bearer %s" % (self.app_id,)
 
     def _user_agent_match(self, other):
         if self.user_agent is not None:
             return other["User-Agent"] == self.user_agent
 
-        return True
-
-    def _idempotency_key_match(self, other):
-        if self.idempotency_key is not None:
-            return other["Idempotency-Key"] == self.idempotency_key
         return True
 
     def _x_fintecture_ua_contains_app_info(self, other):
@@ -214,17 +205,19 @@ class TestAPIRequestor(object):
     @pytest.fixture(autouse=True)
     def setup_fintecture(self):
         orig_attrs = {
-            "api_key": fintecture.api_key,
+            "app_id": fintecture.app_id,
             "api_version": fintecture.api_version,
             "default_http_client": fintecture.default_http_client,
             "enable_telemetry": fintecture.enable_telemetry,
         }
-        fintecture.api_key = "sk_test_123"
+        fintecture.app_id = "test_123"
+        fintecture.app_secret = "test_456"
         fintecture.api_version = "2017-12-14"
         fintecture.default_http_client = None
         fintecture.enable_telemetry = False
         yield
-        fintecture.api_key = orig_attrs["api_key"]
+        fintecture.app_id = orig_attrs["app_id"]
+        fintecture.app_secret = orig_attrs["app_secret"]
         fintecture.api_version = orig_attrs["api_version"]
         fintecture.default_http_client = orig_attrs["default_http_client"]
         fintecture.enable_telemetry = orig_attrs["enable_telemetry"]
@@ -251,36 +244,21 @@ class TestAPIRequestor(object):
         return mock_response
 
     @pytest.fixture
-    def mock_streaming_response(self, mocker, http_client):
-        def mock_streaming_response(return_body, return_code, headers=None):
-            http_client.request_stream_with_retries = mocker.Mock(
-                return_value=(return_body, return_code, headers or {})
-            )
-
-        return mock_streaming_response
-
-    @pytest.fixture
     def check_call(self, http_client):
         def check_call(
             method,
             abs_url=None,
             headers=None,
             post_data=None,
-            is_streaming=False,
         ):
             if not abs_url:
                 abs_url = "%s%s" % (fintecture.api_base, self.valid_path)
             if not headers:
                 headers = APIHeaderMatcher(request_method=method)
 
-            if is_streaming:
-                http_client.request_stream_with_retries.assert_called_with(
-                    method, abs_url, headers, post_data
-                )
-            else:
-                http_client.request_with_retries.assert_called_with(
-                    method, abs_url, headers, post_data
-                )
+            http_client.request_with_retries.assert_called_with(
+                method, abs_url, headers, post_data
+            )
 
         return check_call
 
@@ -397,28 +375,6 @@ class TestAPIRequestor(object):
             assert resp.data == {}
             assert resp.data == json.loads(resp.body)
 
-    def test_empty_methods_streaming_response(
-        self, requestor, mock_streaming_response, check_call
-    ):
-        for meth in VALID_API_METHODS:
-            mock_streaming_response(util.io.BytesIO(b"thisisdata"), 200)
-
-            resp, key = requestor.request_stream(
-                meth,
-                self.valid_path,
-                {},
-            )
-
-            if meth == "post":
-                post_data = ""
-            else:
-                post_data = None
-
-            check_call(meth, post_data=post_data, is_streaming=True)
-            assert isinstance(resp, FintectureStreamResponse)
-
-            assert resp.io.getvalue() == b"thisisdata"
-
     def test_methods_with_params_and_response(
         self, requestor, mock_response, check_call
     ):
@@ -453,49 +409,6 @@ class TestAPIRequestor(object):
                     encoded,
                 )
                 check_call(method, abs_url=UrlMatcher(abs_url))
-
-    def test_methods_with_params_and_streaming_response(
-        self, requestor, mock_streaming_response, check_call
-    ):
-        for method in VALID_API_METHODS:
-            mock_streaming_response(
-                util.io.BytesIO(b'{"foo": "bar", "baz": 6}'), 200
-            )
-
-            params = {
-                "alist": [1, 2, 3],
-                "adict": {"frobble": "bits"},
-                "adatetime": datetime.datetime(2013, 1, 1, tzinfo=GMT1()),
-            }
-            encoded = (
-                "adict[frobble]=bits&adatetime=1356994800&"
-                "alist[0]=1&alist[1]=2&alist[2]=3"
-            )
-
-            resp, key = requestor.request_stream(
-                method,
-                self.valid_path,
-                params,
-            )
-            assert isinstance(resp, FintectureStreamResponse)
-
-            assert resp.io.getvalue() == b'{"foo": "bar", "baz": 6}'
-
-            if method == "post":
-                check_call(
-                    method,
-                    post_data=QueryMatcher(fintecture.util.parse_qsl(encoded)),
-                    is_streaming=True,
-                )
-            else:
-                abs_url = "%s%s?%s" % (
-                    fintecture.api_base,
-                    self.valid_path,
-                    encoded,
-                )
-                check_call(
-                    method, abs_url=UrlMatcher(abs_url), is_streaming=True
-                )
 
     def test_uses_headers(self, requestor, mock_response, check_call):
         mock_response("{}", 200)
@@ -612,34 +525,8 @@ class TestAPIRequestor(object):
 
         check_call("get", headers=APIHeaderMatcher(fail_platform_call=True))
 
-    def test_uses_given_idempotency_key(
-        self, requestor, mock_response, check_call
-    ):
-        mock_response("{}", 200)
-        meth = "post"
-        requestor.request(
-            meth, self.valid_path, {}, {"Idempotency-Key": "123abc"}
-        )
-
-        header_matcher = APIHeaderMatcher(
-            request_method=meth, idempotency_key="123abc"
-        )
-        check_call(meth, headers=header_matcher, post_data="")
-
-    def test_uuid4_idempotency_key_when_not_given(
-        self, requestor, mock_response, check_call
-    ):
-        mock_response("{}", 200)
-        meth = "post"
-        requestor.request(meth, self.valid_path, {})
-
-        header_matcher = APIHeaderMatcher(
-            request_method=meth, idempotency_key=AnyUUID4Matcher()
-        )
-        check_call(meth, headers=header_matcher, post_data="")
-
-    def test_fails_without_api_key(self, requestor):
-        fintecture.api_key = None
+    def test_fails_without_app_id(self, requestor):
+        fintecture.app_id = None
 
         with pytest.raises(fintecture.error.AuthenticationError):
             requestor.request("get", self.valid_path, {})
@@ -656,12 +543,6 @@ class TestAPIRequestor(object):
         with pytest.raises(fintecture.error.InvalidRequestError):
             requestor.request("get", self.valid_path, {})
 
-    def test_idempotency_error(self, requestor, mock_response):
-        mock_response('{"error": {"type": "idempotency_error"}}', 400)
-
-        with pytest.raises(fintecture.error.IdempotencyError):
-            requestor.request("get", self.valid_path, {})
-
     def test_authentication_error(self, requestor, mock_response):
         mock_response('{"error": {}}', 401)
 
@@ -673,13 +554,6 @@ class TestAPIRequestor(object):
 
         with pytest.raises(fintecture.error.PermissionError):
             requestor.request("get", self.valid_path, {})
-
-    def test_card_error(self, requestor, mock_response):
-        mock_response('{"error": {"code": "invalid_expiry_year"}}', 402)
-
-        with pytest.raises(fintecture.error.CardError) as excinfo:
-            requestor.request("get", self.valid_path, {})
-        assert excinfo.value.code == "invalid_expiry_year"
 
     def test_rate_limit_error(self, requestor, mock_response):
         mock_response('{"error": {}}', 429)
@@ -718,43 +592,6 @@ class TestAPIRequestor(object):
         with pytest.raises(fintecture.oauth_error.InvalidRequestError):
             requestor.request("get", self.valid_path, {})
 
-    def test_invalid_client_error(self, requestor, mock_response):
-        mock_response('{"error": "invalid_client"}', 401)
-
-        with pytest.raises(fintecture.oauth_error.InvalidClientError):
-            requestor.request("get", self.valid_path, {})
-
-    def test_invalid_grant_error(self, requestor, mock_response):
-        mock_response('{"error": "invalid_grant"}', 400)
-
-        with pytest.raises(fintecture.oauth_error.InvalidGrantError):
-            requestor.request("get", self.valid_path, {})
-
-    def test_extract_error_from_stream_request_for_bytes(
-        self, requestor, mock_streaming_response
-    ):
-        mock_streaming_response(
-            util.io.BytesIO(b'{"error": "invalid_grant"}'), 400
-        )
-
-        with pytest.raises(fintecture.oauth_error.InvalidGrantError):
-            requestor.request_stream("get", self.valid_path, {})
-
-    def test_extract_error_from_stream_request_for_response(
-        self, requestor, mock_streaming_response
-    ):
-        # Responses don't have getvalue, they only have a read method.
-        mock_streaming_response(
-            urllib3.response.HTTPResponse(
-                body=util.io.BytesIO(b'{"error": "invalid_grant"}'),
-                preload_content=False,
-            ),
-            400,
-        )
-
-        with pytest.raises(fintecture.oauth_error.InvalidGrantError):
-            requestor.request_stream("get", self.valid_path, {})
-
     def test_raw_request_with_file_param(self, requestor, mock_response):
         test_file = tempfile.NamedTemporaryFile()
         test_file.write("\u263A".encode("utf-16"))
@@ -769,12 +606,15 @@ class TestDefaultClient(object):
     @pytest.fixture(autouse=True)
     def setup_fintecture(self):
         orig_attrs = {
-            "api_key": fintecture.api_key,
+            "app_id": fintecture.app_id,
+            "app_secret": fintecture.app_secret,
             "default_http_client": fintecture.default_http_client,
         }
-        fintecture.api_key = "sk_test_123"
+        fintecture.app_id = "test_123"
+        fintecture.app_secret = "test_456"
         yield
-        fintecture.api_key = orig_attrs["api_key"]
+        fintecture.app_id = orig_attrs["app_id"]
+        fintecture.app_secret = orig_attrs["app_secret"]
         fintecture.default_http_client = orig_attrs["default_http_client"]
 
     def test_default_http_client_called(self, mocker):

@@ -4,7 +4,8 @@ import time
 
 import pytest
 
-from fintecture
+import fintecture
+
 from fintecture import six
 
 

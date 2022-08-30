@@ -49,10 +49,8 @@ class APIResource(FintectureObject):
         self,
         method_,
         url_,
-        api_key=None,
-        idempotency_key=None,
+        app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         headers=None,
         params=None,
     ):
@@ -60,10 +58,8 @@ class APIResource(FintectureObject):
             self,
             method_,
             url_,
-            api_key,
-            idempotency_key,
+            app_id,
             fintecture_version,
-            fintecture_account,
             headers,
             params,
         )
@@ -81,9 +77,7 @@ class APIResource(FintectureObject):
         method_,
         url_,
         app_id=None,
-        idempotency_key=None,
         fintecture_version=None,
-        fintecture_account=None,
         headers=None,
         params=None,
     ):
@@ -92,9 +86,7 @@ class APIResource(FintectureObject):
             method_,
             url_,
             app_id,
-            idempotency_key,
             fintecture_version,
-            fintecture_account,
             headers,
             params,
         )
@@ -110,20 +102,12 @@ class APIResource(FintectureObject):
         method_,
         url_,
         app_id=None,
-        idempotency_key=None,
         fintecture_version=None,
-        fintecture_account=None,
         params=None,
     ):
         params = None if params is None else params.copy()
-        idempotency_key = util.read_special_variable(
-            params, "idempotency_key", idempotency_key
-        )
         fintecture_version = util.read_special_variable(
             params, "fintecture_version", fintecture_version
-        )
-        fintecture_account = util.read_special_variable(
-            params, "fintecture_account", fintecture_account
         )
         fintecture_app_id = util.read_special_variable(
             params, "app_id", app_id
@@ -141,51 +125,9 @@ class APIResource(FintectureObject):
             app_secret=fintecture_app_secret,
             private_key=fintecture_private_key,
             api_version=fintecture_version,
-            account=fintecture_account
         )
 
-        if idempotency_key is not None:
-            headers = {} if headers is None else headers.copy()
-            headers.update(util.populate_headers(idempotency_key))
-
-        response, api_key = requestor.request(method_, url_, params, headers)
+        response, my_app_id = requestor.request(method_, url_, params, headers)
         return util.convert_to_fintecture_object(
-            response, api_key, fintecture_version, fintecture_account, params
+            response, my_app_id, fintecture_version, params
         )
-
-    # The `method_` and `url_` arguments are suffixed with an underscore to
-    # avoid conflicting with actual request parameters in `params`.
-    @classmethod
-    def _static_request_stream(
-        cls,
-        method_,
-        url_,
-        api_key=None,
-        idempotency_key=None,
-        fintecture_version=None,
-        fintecture_account=None,
-        params=None,
-    ):
-        params = None if params is None else params.copy()
-        api_key = util.read_special_variable(params, "api_key", api_key)
-        idempotency_key = util.read_special_variable(
-            params, "idempotency_key", idempotency_key
-        )
-        fintecture_version = util.read_special_variable(
-            params, "fintecture_version", fintecture_version
-        )
-        fintecture_account = util.read_special_variable(
-            params, "fintecture_account", fintecture_account
-        )
-        headers = util.read_special_variable(params, "headers", None)
-
-        requestor = api_requestor.APIRequestor(
-            api_key, api_version=fintecture_version, account=fintecture_account
-        )
-
-        if idempotency_key is not None:
-            headers = {} if headers is None else headers.copy()
-            headers.update(util.populate_headers(idempotency_key))
-
-        response, _ = requestor.request_stream(method_, url_, params, headers)
-        return response

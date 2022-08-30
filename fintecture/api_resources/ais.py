@@ -17,7 +17,8 @@ class AIS(APIResource):
     def oauth(cls, **params):
         if not params.get('code', False):
             raise error.InvalidRequestError(
-                "code parameter is required for authenticate with oAuth through AIS application"
+                message="code parameter is required for authenticate with oAuth through AIS application",
+                param='code',
             )
 
         params.update({
@@ -43,11 +44,14 @@ class AIS(APIResource):
     def connect(cls, **params):
         if not params.get('redirect_uri', False):
             raise error.InvalidRequestError(
-                "redirect_uri: must correspond to one of the URLs provided when creating an application on the console."
+                message="redirect_uri: must correspond to one of the URLs provided when creating an "
+                        "application on the console.",
+                param='redirect_uri',
             )
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: an mandatory state parameter which will be provided back on redirection	."
+                message="state: a mandatory state parameter which will be provided back on redirection.",
+                param='state',
             )
         return cls._static_request(
             "get",
@@ -60,7 +64,8 @@ class AIS(APIResource):
 
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: an mandatory state parameter which will be provided back on redirection	."
+                message="state: a mandatory state parameter which will be provided back on redirection.",
+                param='state'
             )
 
         model = params.get('model', False)
@@ -73,7 +78,8 @@ class AIS(APIResource):
             psu_ip_address = params.get('psu_ip_address', False)
             if not psu_id or not psu_ip_address:
                 raise error.InvalidRequestError(
-                    "when model is 'decoupled' the 'x-psu-id' and 'x-psu-ip-address' parameters are required."
+                    message="when model is 'decoupled' the 'x-psu-id' and 'x-psu-ip-address' parameters are required.",
+                    param='x-psu-id,x-psu-ip-address'
                 )
             headers['x-psu-id'] = psu_id
             headers['x-psu-ip-address'] = psu_ip_address
@@ -98,7 +104,8 @@ class AIS(APIResource):
         psu_ip_address = params.get('psu_ip_address', False)
         if not psu_id or not psu_ip_address:
             raise error.InvalidRequestError(
-                "when model is 'decoupled' the 'x-psu-id' and 'x-psu-ip-address' parameters are required."
+                message="when model is 'decoupled' the 'x-psu-id' and 'x-psu-ip-address' parameters are required.",
+                param='x-psu-id,x-psu-ip-address',
             )
         headers['x-psu-id'] = psu_id
         headers['x-psu-ip-address'] = psu_ip_address

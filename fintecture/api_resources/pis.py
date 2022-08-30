@@ -50,7 +50,8 @@ class PIS(APIResource):
     def initiate_refund(cls, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: A state parameter which will be provided back on redirection."
+                message="state: A state parameter which will be provided back on redirection.",
+                param='state',
             )
         state = params.get('state')
         del params['state']
@@ -70,11 +71,13 @@ class PIS(APIResource):
         language = params.get('language', '')
         if not language:
             raise error.InvalidRequestError(
-                "language: its a required parameter that is a code of two letters; ex: fr"
+                message="language: its a required parameter that is a code of two letters; ex: fr",
+                param='language',
             )
         if len(language) != 2:
             raise error.InvalidRequestError(
-                "language parameter is of two characters of length; ex: fr"
+                message="language parameter is of two characters of length; ex: fr",
+                param='language',
             )
         params.update({
             'headers': {
@@ -82,6 +85,7 @@ class PIS(APIResource):
                 'x-language': language,
             }
         })
+        del params['language']
         return cls._static_request(
             "post",
             "/pis/v2/request-to-pay?redirect_uri={url}".format(url=redirect_uri),
@@ -89,10 +93,11 @@ class PIS(APIResource):
         )
 
     @classmethod
-    def request_to_payout(cls, redirect_uri, **params):
+    def request_for_payout(cls, redirect_uri, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: A state parameter which will be provided back on redirection."
+                message="state: A state parameter which will be provided back on redirection.",
+                param='state',
             )
         state = params.get('state')
         del params['state']
@@ -100,11 +105,13 @@ class PIS(APIResource):
         language = params.get('language', '')
         if not language:
             raise error.InvalidRequestError(
-                "language: its a required parameter that is a code of two letters; ex: fr"
+                message="language: its a required parameter that is a code of two letters; ex: fr",
+                param='language',
             )
         if len(language) != 2:
             raise error.InvalidRequestError(
-                "language parameter is of two characters of length; ex: fr"
+                message="language parameter is of two characters of length; ex: fr",
+                param='language',
             )
         params.update({
             'headers': {
@@ -112,6 +119,7 @@ class PIS(APIResource):
                 'x-language': language,
             }
         })
+        del params['language']
         return cls._static_request(
             "post",
             "/pis/v2/request-for-payout?redirect_uri={url}&state={state}".format(

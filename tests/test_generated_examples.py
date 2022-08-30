@@ -1,6 +1,7 @@
 # File generated from our OpenAPI spec
 from __future__ import absolute_import, division, print_function
-from fintecture
+
+import fintecture
 
 
 class TestGeneratedExamples(object):
@@ -949,62 +950,6 @@ class TestGeneratedExamples(object):
         request_mock.assert_requested(
             "get",
             "/v1/financial_connections/sessions/fcsess_xxxxxxxxxxxxx",
-        )
-
-    def test_identity_verificationreport_list(self, request_mock):
-        fintecture.identity.VerificationReport.list(limit=3)
-        request_mock.assert_requested(
-            "get", "/v1/identity/verification_reports"
-        )
-
-    def test_identity_verificationreport_retrieve(self, request_mock):
-        fintecture.identity.VerificationReport.retrieve("vr_xxxxxxxxxxxxx")
-        request_mock.assert_requested(
-            "get",
-            "/v1/identity/verification_reports/vr_xxxxxxxxxxxxx",
-        )
-
-    def test_identity_verificationsession_list(self, request_mock):
-        fintecture.identity.VerificationSession.list(limit=3)
-        request_mock.assert_requested(
-            "get", "/v1/identity/verification_sessions"
-        )
-
-    def test_identity_verificationsession_create(self, request_mock):
-        fintecture.identity.VerificationSession.create(type="document")
-        request_mock.assert_requested(
-            "post", "/v1/identity/verification_sessions"
-        )
-
-    def test_identity_verificationsession_retrieve(self, request_mock):
-        fintecture.identity.VerificationSession.retrieve("vs_xxxxxxxxxxxxx")
-        request_mock.assert_requested(
-            "get",
-            "/v1/identity/verification_sessions/vs_xxxxxxxxxxxxx",
-        )
-
-    def test_identity_verificationsession_update(self, request_mock):
-        fintecture.identity.VerificationSession.modify(
-            "vs_xxxxxxxxxxxxx",
-            type="id_number",
-        )
-        request_mock.assert_requested(
-            "post",
-            "/v1/identity/verification_sessions/vs_xxxxxxxxxxxxx",
-        )
-
-    def test_identity_verificationsession_cancel(self, request_mock):
-        fintecture.identity.VerificationSession.cancel("vs_xxxxxxxxxxxxx")
-        request_mock.assert_requested(
-            "post",
-            "/v1/identity/verification_sessions/vs_xxxxxxxxxxxxx/cancel",
-        )
-
-    def test_identity_verificationsession_redact(self, request_mock):
-        fintecture.identity.VerificationSession.redact("vs_xxxxxxxxxxxxx")
-        request_mock.assert_requested(
-            "post",
-            "/v1/identity/verification_sessions/vs_xxxxxxxxxxxxx/redact",
         )
 
     def test_invoiceitem_list(self, request_mock):

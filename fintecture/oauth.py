@@ -58,7 +58,8 @@ class OAuth(object):
     def refresh_token(app_id=None, app_secret=None, **params):
         if not params.get('refresh_token', False):
             raise error.InvalidRequestError(
-                "refresh_token parameter is required for refresh token"
+                message="refresh_token parameter is required for refresh token",
+                param='refresh_token',
             )
 
         if app_id:
