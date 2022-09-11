@@ -7,15 +7,17 @@ from fintecture.api_resources.abstract import ListableAPIResource
 from fintecture.api_resources.abstract import UpdateableAPIResource
 
 
-class Payout(
-    CreateableAPIResource, ListableAPIResource, UpdateableAPIResource
+class VerificationSession(
+    CreateableAPIResource,
+    ListableAPIResource,
+    UpdateableAPIResource,
 ):
-    OBJECT_NAME = "payout"
+    OBJECT_NAME = "identity.verification_session"
 
     @classmethod
     def _cls_cancel(
         cls,
-        payout,
+        session,
         api_key=None,
         fintecture_version=None,
         fintecture_account=None,
@@ -23,8 +25,8 @@ class Payout(
     ):
         return cls._static_request(
             "post",
-            "/v1/payouts/{payout}/cancel".format(
-                payout=util.sanitize_id(payout)
+            "/v1/identity/verification_sessions/{session}/cancel".format(
+                session=util.sanitize_id(session)
             ),
             api_key=api_key,
             fintecture_version=fintecture_version,
@@ -36,17 +38,17 @@ class Payout(
     def cancel(self, idempotency_key=None, **params):
         return self._request(
             "post",
-            "/v1/payouts/{payout}/cancel".format(
-                payout=util.sanitize_id(self.get("id"))
+            "/v1/identity/verification_sessions/{session}/cancel".format(
+                session=util.sanitize_id(self.get("id"))
             ),
             idempotency_key=idempotency_key,
             params=params,
         )
 
     @classmethod
-    def _cls_reverse(
+    def _cls_redact(
         cls,
-        payout,
+        session,
         api_key=None,
         fintecture_version=None,
         fintecture_account=None,
@@ -54,8 +56,8 @@ class Payout(
     ):
         return cls._static_request(
             "post",
-            "/v1/payouts/{payout}/reverse".format(
-                payout=util.sanitize_id(payout)
+            "/v1/identity/verification_sessions/{session}/redact".format(
+                session=util.sanitize_id(session)
             ),
             api_key=api_key,
             fintecture_version=fintecture_version,
@@ -63,12 +65,12 @@ class Payout(
             params=params,
         )
 
-    @util.class_method_variant("_cls_reverse")
-    def reverse(self, idempotency_key=None, **params):
+    @util.class_method_variant("_cls_redact")
+    def redact(self, idempotency_key=None, **params):
         return self._request(
             "post",
-            "/v1/payouts/{payout}/reverse".format(
-                payout=util.sanitize_id(self.get("id"))
+            "/v1/identity/verification_sessions/{session}/redact".format(
+                session=util.sanitize_id(self.get("id"))
             ),
             idempotency_key=idempotency_key,
             params=params,

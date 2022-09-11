@@ -1,11 +1,13 @@
+# File generated from our OpenAPI spec
 from __future__ import absolute_import, division, print_function
 
 # flake8: noqa
 
-from fintecture.api_resources.error_object import ErrorObject
+from fintecture.api_resources.error_object import ErrorObject, OAuthErrorObject
 from fintecture.api_resources.list_object import ListObject
 from fintecture.api_resources.search_result_object import SearchResultObject
 
+from fintecture.api_resources import identity
 from fintecture.api_resources import test_helpers
 
 from fintecture.api_resources.ais import AIS

@@ -10,43 +10,50 @@ class ListObject(FintectureObject):
     OBJECT_NAME = "list"
 
     def list(
-        self, app_id=None, fintecture_version=None, **params
+        self, api_key=None, fintecture_version=None, fintecture_account=None, **params
     ):
         return self._request(
             "get",
             self.get("url"),
-            app_id=app_id,
+            api_key=api_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             params=params,
         )
 
     def create(
         self,
-        app_id=None,
+        api_key=None,
+        idempotency_key=None,
         fintecture_version=None,
+        fintecture_account=None,
         **params
     ):
         return self._request(
             "post",
             self.get("url"),
-            app_id=app_id,
+            api_key=api_key,
+            idempotency_key=idempotency_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             params=params,
         )
 
     def retrieve(
         self,
         id,
-        app_id=None,
+        api_key=None,
         fintecture_version=None,
+        fintecture_account=None,
         **params
     ):
         url = "%s/%s" % (self.get("url"), quote_plus(util.utf8(id)))
         return self._request(
             "get",
             url,
-            app_id=app_id,
+            api_key=api_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             params=params,
         )
 
@@ -91,12 +98,13 @@ class ListObject(FintectureObject):
 
     @classmethod
     def empty_list(
-        cls, app_id=None, fintecture_version=None
+        cls, api_key=None, fintecture_version=None, fintecture_account=None
     ):
         return cls.construct_from(
             {"data": []},
-            app_id=app_id,
+            key=api_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             last_response=None,
         )
 
@@ -105,12 +113,13 @@ class ListObject(FintectureObject):
         return not self.data
 
     def next_page(
-        self, app_id=None, fintecture_version=None, **params
+        self, api_key=None, fintecture_version=None, fintecture_account=None, **params
     ):
         if not self.has_more:
             return self.empty_list(
-                app_id=app_id,
+                api_key=api_key,
                 fintecture_version=fintecture_version,
+                fintecture_account=fintecture_account,
             )
 
         last_id = self.data[-1].id
@@ -120,18 +129,20 @@ class ListObject(FintectureObject):
         params_with_filters.update(params)
 
         return self.list(
-            app_id=app_id,
+            api_key=api_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             **params_with_filters
         )
 
     def previous_page(
-        self, app_id=None, fintecture_version=None, **params
+        self, api_key=None, fintecture_version=None, fintecture_account=None, **params
     ):
         if not self.has_more:
             return self.empty_list(
-                app_id=app_id,
+                api_key=api_key,
                 fintecture_version=fintecture_version,
+                fintecture_account=fintecture_account,
             )
 
         first_id = self.data[0].id
@@ -141,7 +152,8 @@ class ListObject(FintectureObject):
         params_with_filters.update(params)
 
         return self.list(
-            app_id=app_id,
+            api_key=api_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             **params_with_filters
         )

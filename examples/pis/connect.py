@@ -4,11 +4,9 @@ import os
 
 import fintecture
 
-
 fintecture.app_id = os.environ.get("FINTECTURE_APP_ID")
 fintecture.app_secret = os.environ.get("FINTECTURE_APP_SECRET")
 fintecture.private_key = os.environ.get("FINTECTURE_PRIVATE_KEY")
-
 
 try:
     print("Searching URL to connect with PIS...")
@@ -23,6 +21,7 @@ try:
 
     resp_connect = fintecture.PIS.connect(
         state="1234",
+        with_virtualbeneficiary=True,
         meta={
             'psu_name': 'M. John Doe',
             'psu_email': 'john@doe.com',
@@ -35,13 +34,17 @@ try:
                 'city': 'Gotham',
                 'country': 'FR',
             },
+            "reconciliation": {
+                "level": "payment_session",
+                "match_amount": True
+            }
         },
         data={
-            'type': 'SEPA',
+            'type': 'connect',
             'attributes': {
                 'amount': '550.60',
                 'currency': 'EUR',
-                'communication': 'Order 15654'
+                'communication': 'Order 15654',
             }
         }
     )

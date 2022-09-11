@@ -19,8 +19,9 @@ class Refund(
     def _cls_cancel(
         cls,
         refund,
-        app_id=None,
+        api_key=None,
         fintecture_version=None,
+        fintecture_account=None,
         **params
     ):
         return cls._static_request(
@@ -28,18 +29,20 @@ class Refund(
             "/v1/refunds/{refund}/cancel".format(
                 refund=util.sanitize_id(refund)
             ),
-            app_id=app_id,
+            api_key=api_key,
             fintecture_version=fintecture_version,
+            fintecture_account=fintecture_account,
             params=params,
         )
 
     @util.class_method_variant("_cls_cancel")
-    def cancel(self, **params):
+    def cancel(self, idempotency_key=None, **params):
         return self._request(
             "post",
             "/v1/refunds/{refund}/cancel".format(
                 refund=util.sanitize_id(self.get("id"))
             ),
+            idempotency_key=idempotency_key,
             params=params,
         )
 
@@ -48,8 +51,9 @@ class Refund(
         def _cls_expire(
             cls,
             refund,
-            app_id=None,
+            api_key=None,
             fintecture_version=None,
+            fintecture_account=None,
             **params
         ):
             return cls._static_request(
@@ -57,17 +61,19 @@ class Refund(
                 "/v1/test_helpers/refunds/{refund}/expire".format(
                     refund=util.sanitize_id(refund)
                 ),
-                app_id=app_id,
+                api_key=api_key,
                 fintecture_version=fintecture_version,
+                fintecture_account=fintecture_account,
                 params=params,
             )
 
         @util.class_method_variant("_cls_expire")
-        def expire(self, **params):
+        def expire(self, idempotency_key=None, **params):
             return self.resource._request(
                 "post",
                 "/v1/test_helpers/refunds/{refund}/expire".format(
                     refund=util.sanitize_id(self.resource.get("id"))
                 ),
+                idempotency_key=idempotency_key,
                 params=params,
             )

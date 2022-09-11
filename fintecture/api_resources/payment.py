@@ -32,8 +32,7 @@ class Payment(
     def connect(cls, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                message="state: A state parameter which will be provided back on redirection.",
-                param='state',
+                "state: A state parameter which will be provided back on redirection."
             )
         state = params.get('state')
         del params['state']
@@ -52,8 +51,7 @@ class Payment(
     def initiate(cls, provider_id, redirect_uri, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                message="state: A state parameter which will be provided back on redirection.",
-                param='state',
+                "state: A state parameter which will be provided back on redirection."
             )
         state = params.get('state')
         del params['state']
@@ -87,30 +85,6 @@ class Payment(
             params=params,
         )
 
-    def update(self, **params):
-        session_id = self.get('data', {}).get('id', {})
-        if not params.get('status', False):
-            raise error.InvalidRequestError(
-                message="status: is a parameter for update payment attributes and "
-                        "only accepts 'payment_cancelled' value",
-                param='status'
-            )
-        status = params.get('status')
-        del params['status']
-
-        params.update({
-            "meta": {
-                "status": status
-            },
-            'headers': {
-                'Content-Type': 'application/json'
-            }
-        })
-        return self._request(
-            "patch",
-            "/pis/v2/payments/{}".format(session_id),
-            params=params,
-        )
 
     @classmethod
     def class_url(cls):

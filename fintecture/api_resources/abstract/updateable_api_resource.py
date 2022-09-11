@@ -11,12 +11,13 @@ class UpdateableAPIResource(APIResource):
         url = "%s/%s" % (cls.class_url(), quote_plus(util.utf8(sid)))
         return cls._static_request("post", url, params=params)
 
-    def save(self):
+    def save(self, idempotency_key=None):
         updated_params = self.serialize(None)
         if updated_params:
             self._request_and_refresh(
                 "post",
                 self.instance_url(),
+                idempotency_key=idempotency_key,
                 params=updated_params,
             )
         else:

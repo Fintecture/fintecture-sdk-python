@@ -62,6 +62,7 @@ print("Doing a request to pay call with redirection URL to %s..." % redirect_uri
 resp_request_to_pay = fintecture.PIS.request_to_pay(
     redirect_uri,
     language='es',
+    state='85321',
     meta={
         'psu_name': 'M. John Doe',
         'psu_email': 'john@doe.com',
@@ -95,4 +96,4 @@ print("Success: %r" % (resp_request_to_pay))
 # session_id        fee8b638c1c44af1a4a2dd7dd781ecf8
 # status            payment_created
 # provider          cmcifrpp
-# state             1234
+# state             85321

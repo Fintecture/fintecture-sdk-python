@@ -33,15 +33,19 @@ def nested_resource_class_methods(
             cls,
             method,
             url,
-            app_id=None,
+            api_key=None,
+            idempotency_key=None,
             fintecture_version=None,
+            fintecture_account=None,
             **params
         ):
             return APIResource._static_request(
                 method,
                 url,
-                app_id=app_id,
+                api_key=api_key,
+                idempotency_key=idempotency_key,
                 fintecture_version=fintecture_version,
+                fintecture_account=fintecture_account,
                 params=params,
             )
 

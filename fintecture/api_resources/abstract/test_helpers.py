@@ -71,6 +71,7 @@ def test_helpers(cls):
 
     cls.TestHelpers._resource_cls = cls
     cls.TestHelpers._static_request = cls._static_request
+    cls.TestHelpers._static_request_stream = cls._static_request_stream
 
     cls.test_helpers = property(test_helpers_getter)
     return cls

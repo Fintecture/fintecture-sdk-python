@@ -8,8 +8,10 @@ class ErrorObject(FintectureObject):
     def refresh_from(
         self,
         values,
-        app_id=None,
+        api_key=None,
+        partial=False,
         fintecture_version=None,
+        fintecture_account=None,
         last_response=None,
     ):
         # Unlike most other API resources, the API will omit attributes in
@@ -17,16 +19,51 @@ class ErrorObject(FintectureObject):
         # values here to facilitate generic error handling.
         values = merge_dicts(
             {
-                "status": None,
+                "charge": None,
                 "code": None,
-                "log_id": None,
-                "errors": [],
+                "decline_code": None,
+                "doc_url": None,
+                "message": None,
+                "param": None,
+                "payment_intent": None,
+                "payment_method": None,
+                "setup_intent": None,
+                "source": None,
+                "type": None,
             },
             values,
         )
         return super(ErrorObject, self).refresh_from(
             values,
-            app_id,
+            api_key,
+            partial,
             fintecture_version,
+            fintecture_account,
+            last_response,
+        )
+
+
+class OAuthErrorObject(FintectureObject):
+    def refresh_from(
+        self,
+        values,
+        api_key=None,
+        partial=False,
+        fintecture_version=None,
+        fintecture_account=None,
+        last_response=None,
+    ):
+        # Unlike most other API resources, the API will omit attributes in
+        # error objects when they have a null value. We manually set default
+        # values here to facilitate generic error handling.
+        values = merge_dicts(
+            {"error": None, "error_description": None}, values
+        )
+        return super(OAuthErrorObject, self).refresh_from(
+            values,
+            api_key,
+            partial,
+            fintecture_version,
+            fintecture_account,
             last_response,
         )

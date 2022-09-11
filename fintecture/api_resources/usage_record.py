@@ -11,8 +11,10 @@ class UsageRecord(APIResource):
     @classmethod
     def create(
         cls,
-        app_id=None,
+        api_key=None,
+        idempotency_key=None,
         fintecture_version=None,
+        fintecture_account=None,
         **params
     ):
         if "subscription_item" not in params:
@@ -21,11 +23,12 @@ class UsageRecord(APIResource):
         subscription_item = params.pop("subscription_item")
 
         requestor = api_requestor.APIRequestor(
-            app_id, api_version=fintecture_version
+            api_key, api_version=fintecture_version, account=fintecture_account
         )
         url = "/v1/subscription_items/%s/usage_records" % subscription_item
-        response, my_app_id = requestor.request("post", url, params, {})
+        headers = util.populate_headers(idempotency_key)
+        response, api_key = requestor.request("post", url, params, headers)
 
         return util.convert_to_fintecture_object(
-            response, my_app_id, fintecture_version
+            response, api_key, fintecture_version, fintecture_account
         )
