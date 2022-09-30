@@ -27,7 +27,7 @@ class TestSearchableAPIResource(object):
                 "has_more": False,
                 "next_page": None,
             },
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         res = self.MySearchable.search(query='currency:"CAD"')
@@ -38,7 +38,7 @@ class TestSearchableAPIResource(object):
         assert res.data[1].name == "curly"
 
         assert res.last_response is not None
-        assert res.last_response.request_id == "req_id"
+        assert res.last_response.x_request_id == "req_id"
 
     def test_search_multiple_pages(self, request_mock):
         request_mock.stub_request(
@@ -54,7 +54,7 @@ class TestSearchableAPIResource(object):
                 "has_more": True,
                 "next_page": "next-page-token",
             },
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         res = self.MySearchable.search(query='currency:"CAD"')
@@ -76,7 +76,7 @@ class TestSearchableAPIResource(object):
                 "has_more": False,
                 "next_page": None,
             },
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
         res2 = self.MySearchable.search(
             query='currency:"CAD"', page=res.next_page

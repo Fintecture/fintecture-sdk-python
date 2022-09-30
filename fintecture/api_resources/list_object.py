@@ -102,7 +102,7 @@ class ListObject(FintectureObject):
     ):
         return cls.construct_from(
             {"data": []},
-            app_id=api_key,
+            key=api_key,
             fintecture_version=fintecture_version,
             fintecture_account=fintecture_account,
             last_response=None,

@@ -20,7 +20,7 @@ class TestListableAPIResource(object):
                 "url": "/v1/charges",
                 "has_more": False,
             },
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         res = self.MyListable.list()
@@ -31,4 +31,4 @@ class TestListableAPIResource(object):
         assert res.data[1].name == "curly"
 
         assert res.last_response is not None
-        assert res.last_response.request_id == "req_id"
+        assert res.last_response.x_request_id == "req_id"

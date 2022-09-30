@@ -12,20 +12,18 @@ from fintecture.fintecture_response import FintectureResponseBase, FintectureRes
 class ResponseTestBase(object):
     @pytest.fixture
     def mock_headers(self):
-        return {"idempotency-key": "123456", "request-id": "req_123456"}
+        return {"x-request-id": "req_123456"}
 
     @pytest.fixture
     def mock_response(self, mock_headers):
+        url = 'https://somedomain.com/test'
         code = 200
         headers = mock_headers
-        response = FintectureResponseBase(code, headers)
+        response = FintectureResponseBase(url, code, headers)
         return response
 
-    def test_idempotency_key(self, mock_response, mock_headers):
-        assert mock_response.idempotency_key == mock_headers["idempotency-key"]
-
     def test_request_id(self, mock_response, mock_headers):
-        assert mock_response.request_id == mock_headers["request-id"]
+        assert mock_response.x_request_id == mock_headers["x-request-id"]
 
     def test_code(self, mock_response, mock_headers):
         assert mock_response.code == 200
@@ -49,8 +47,9 @@ class TestFintectureResponse(ResponseTestBase):
 
     @pytest.fixture
     def mock_response(self, mock_headers, mock_body):
+        url = 'https://somedomain.com/test'
         code = 200
-        response = FintectureResponse(mock_body, code, mock_headers)
+        response = FintectureResponse(mock_body, url, code, mock_headers)
         return response
 
     @pytest.fixture

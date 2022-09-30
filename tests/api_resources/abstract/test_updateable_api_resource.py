@@ -15,7 +15,7 @@ class TestUpdateableAPIResource(object):
             "post",
             "/v1/myupdateables/myid",
             {"id": "myid", "thats": "it"},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         return self.MyUpdateable.construct_from(
@@ -40,13 +40,13 @@ class TestUpdateableAPIResource(object):
 
     def test_idempotent_save(self, request_mock, obj):
         obj.baz = "updated"
-        obj.save(idempotency_key="foo")
+        obj.save()
 
         request_mock.assert_requested(
             "post",
             "/v1/myupdateables/myid",
             {"baz": "updated"},
-            {"Idempotency-Key": "foo"},
+            {},
         )
 
     def test_save(self, request_mock, obj):
@@ -70,7 +70,7 @@ class TestUpdateableAPIResource(object):
         )
 
         assert obj.last_response is not None
-        assert obj.last_response.request_id == "req_id"
+        assert obj.last_response.x_request_id == "req_id"
 
         # Saving again should not cause any request.
         request_mock.reset_mock()
@@ -352,15 +352,13 @@ class TestUpdateableAPIResource(object):
             "post",
             "/v1/myupdateables/foo",
             {"id": "foo", "bobble": "new_scrobble"},
-            {"Idempotency-Key": "IdempotencyKey"},
+            {},
         )
 
         self.MyUpdateable.modify(
             "foo",
             fintecture_version="2017-08-15",
-            api_key="APIKEY",
-            idempotency_key="IdempotencyKey",
-            fintecture_account="Acc",
+            app_id="APP_ID",
             bobble="new_scrobble",
             headers={"extra_header": "val"},
         )
@@ -369,6 +367,6 @@ class TestUpdateableAPIResource(object):
             "post",
             "/v1/myupdateables/foo",
             {"bobble": "new_scrobble"},
-            {"Idempotency-Key": "IdempotencyKey", "extra_header": "val"},
+            {"extra_header": "val"},
         )
         request_mock.assert_api_version("2017-08-15")

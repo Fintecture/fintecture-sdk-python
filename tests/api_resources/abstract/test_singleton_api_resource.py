@@ -12,7 +12,7 @@ class TestSingletonAPIResource(object):
             "get",
             "/v1/mysingleton",
             {"single": "ton"},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         res = self.MySingleton.retrieve()
@@ -21,4 +21,4 @@ class TestSingletonAPIResource(object):
         assert res.single == "ton"
 
         assert res.last_response is not None
-        assert res.last_response.request_id == "req_id"
+        assert res.last_response.x_request_id == "req_id"

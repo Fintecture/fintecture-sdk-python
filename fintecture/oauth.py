@@ -4,7 +4,6 @@ import base64
 import fintecture
 
 from fintecture import api_requestor, error
-from fintecture.six.moves.urllib.parse import urlencode
 
 
 class OAuth(object):
@@ -53,13 +52,14 @@ class OAuth(object):
         if app_secret:
             params['app_secret'] = app_secret
         OAuth._set_app_params(params)
-        return fintecture.PIS.oauth(params)
+        return fintecture.PIS.oauth(app_id, app_secret, **params)
 
     @staticmethod
     def refresh_token(app_id=None, app_secret=None, **params):
         if not params.get('refresh_token', False):
             raise error.InvalidRequestError(
-                "refresh_token parameter is required for refresh token"
+                message="refresh_token parameter is required for refresh token",
+                param='refresh_token',
             )
 
         if app_id:

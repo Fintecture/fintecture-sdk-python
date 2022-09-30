@@ -5,9 +5,9 @@ from fintecture.six.moves.urllib.parse import quote_plus
 
 
 def custom_method(name, http_verb, http_path=None, is_streaming=False):
-    if http_verb not in ["get", "post", "patch", "delete"]:
+    if http_verb not in ["get", "post", "delete"]:
         raise ValueError(
-            "Invalid http_verb: %s. Must be one of 'get', 'post', 'patch' or 'delete'"
+            "Invalid http_verb: %s. Must be one of 'get', 'post' or 'delete'"
             % http_verb
         )
     if http_path is None:

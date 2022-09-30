@@ -116,13 +116,13 @@ class TestAccount(object):
     def test_is_deauthorizable(self, request_mock):
         account = fintecture.Account.retrieve(TEST_RESOURCE_ID)
         request_mock.stub_request(
-            "post", "/oauth/deauthorize", {"fintecture_user_id": account.id}
+            "post", "/oauth/deauthorize", {}
         )
         account.deauthorize()
         request_mock.assert_requested(
             "post",
             "/oauth/deauthorize",
-            {"client_id": fintecture.client_id, "fintecture_user_id": account.id},
+            {},
         )
 
     def test_can_call_persons(self, request_mock):

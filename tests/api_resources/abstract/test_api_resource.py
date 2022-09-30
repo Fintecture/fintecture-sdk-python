@@ -15,7 +15,7 @@ class TestAPIResource(object):
             "get",
             url,
             {"id": "foo2", "bobble": "scrobble"},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         res = self.MyResource.retrieve("foo*", myparam=5)
@@ -23,10 +23,11 @@ class TestAPIResource(object):
         request_mock.assert_requested("get", url, {"myparam": 5}, None)
         assert res.bobble == "scrobble"
         assert res.id == "foo2"
-        assert res.api_key == "sk_test_123"
+        assert res.app_id == "test_123"
+        assert res.app_secret == "test_456"
 
         assert res.last_response is not None
-        assert res.last_response.request_id == "req_id"
+        assert res.last_response.x_request_id == "req_id"
 
         url = "/v1/myresources/foo2"
         request_mock.stub_request("get", url, {"frobble": 5})
@@ -49,12 +50,11 @@ class TestAPIResource(object):
         self.MyResource._static_request(
             "get",
             "/v1/myresources/foo",
-            idempotency_key="explicit",
-            params={"idempotency_key": "params", "bobble": "scrobble"},
+            params={"bobble": "scrobble"},
         )
 
         request_mock.assert_requested(
-            "get", url, {"bobble": "scrobble"}, {"Idempotency-Key": "explicit"}
+            "get", url, {"bobble": "scrobble"}, {}
         )
 
     def test_convert_to_fintecture_object(self):

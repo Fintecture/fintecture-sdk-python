@@ -26,14 +26,13 @@ class TestSearchResultObject(object):
         )
 
         res = search_result_object.search(
-            myparam="you", fintecture_account="acct_123"
+            myparam="you"
         )
 
         request_mock.assert_requested(
             "get", "/my/path", {"myparam": "you"}, None
         )
         assert isinstance(res, fintecture.SearchResultObject)
-        assert res.fintecture_account == "acct_123"
         assert isinstance(res.data, list)
         assert isinstance(res.data[0], fintecture.Charge)
         assert res.data[0].foo == "bar"

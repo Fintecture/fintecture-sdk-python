@@ -85,28 +85,6 @@ class Payment(
             params=params,
         )
 
-    def update(self, **params):
-        session_id = self.get('data', {}).get('id', {})
-        if not params.get('status', False):
-            raise error.InvalidRequestError(
-                "status: is a parameter for update payment attributes and only accepts 'payment_cancelled' value"
-            )
-        status = params.get('status')
-        del params['status']
-
-        params.update({
-            "meta": {
-                "status": status
-            },
-            'headers': {
-                'Content-Type': 'application/json'
-            }
-        })
-        return self._request(
-            "patch",
-            "/pis/v2/payments/{}".format(session_id),
-            params=params,
-        )
 
     @classmethod
     def class_url(cls):

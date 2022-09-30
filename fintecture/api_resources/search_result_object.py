@@ -53,7 +53,7 @@ class SearchResultObject(FintectureObject):
     ):
         return cls.construct_from(
             {"data": [], "has_more": False, "next_page": None},
-            app_id=api_key,
+            key=api_key,
             fintecture_version=fintecture_version,
             fintecture_account=fintecture_account,
             last_response=None,

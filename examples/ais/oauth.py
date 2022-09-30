@@ -11,7 +11,7 @@ fintecture.app_secret = os.environ.get("FINTECTURE_APP_SECRET")
 
 print("After user connect him account you will receive in your webhook a code for authenticate")
 
-code = 'ec2c1ee4d1f40f4db60ea30f4ea4769d'
+code = '5ebc08acf13a866a0a97c2a37013cb28'
 token_resp = fintecture.AIS.oauth(code=code)
 
 fintecture.access_token = token_resp['access_token']

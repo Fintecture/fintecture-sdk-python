@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 from fintecture import six, error
 
 
-class FintectureError(object):
+class TestFintectureError(object):
     def test_formatting(self):
         err = error.FintectureError(u"öre")
         assert six.text_type(err) == u"öre"
@@ -15,7 +15,7 @@ class FintectureError(object):
             assert str(err) == u"öre"
 
     def test_formatting_with_request_id(self):
-        err = error.FintectureError(u"öre", headers={"request-id": "123"})
+        err = error.FintectureError(u"öre", headers={"x-request-id": "123"})
         assert six.text_type(err) == u"Request 123: öre"
         if six.PY2:
             assert str(err) == "Request 123: \xc3\xb6re"
@@ -23,7 +23,7 @@ class FintectureError(object):
             assert str(err) == u"Request 123: öre"
 
     def test_formatting_with_none(self):
-        err = error.FintectureError(None, headers={"request-id": "123"})
+        err = error.FintectureError(None, headers={"x-request-id": "123"})
         assert six.text_type(err) == u"Request 123: <empty message>"
         if six.PY2:
             assert str(err) == "Request 123: <empty message>"
@@ -39,52 +39,43 @@ class FintectureError(object):
             assert str(err) == u"<empty message>"
 
     def test_repr(self):
-        err = error.FintectureError(u"öre", headers={"request-id": "123"})
+        err = error.FintectureError(u"öre", headers={"x-request-id": "123"})
         if six.PY2:
             assert (
                 repr(err)
-                == "FintectureError(message=u'\\xf6re', http_status=None, "
-                "request_id='123')"
+                == "FintectureError(message=u'\\xf6re', url=None, http_status=None, log_id=None, "
+                "x_request_id='123', errors=None)"
             )
         else:
             assert (
-                repr(err) == "FintectureError(message='öre', http_status=None, "
-                "request_id='123')"
+                repr(err) == "FintectureError(message='öre', url=None, http_status=None, log_id=None, "
+                "x_request_id='123', errors=None)"
             )
 
     def test_error_object(self):
         err = error.FintectureError(
-            "message", json_body={"error": {"code": "some_error"}}
+            "message", json_body={
+                "status": "477",
+                "code": "invalid_test_code",
+                "log_id": "2398-a872-323a-xxxx",
+                "errors": [
+                    {
+                        "code": "some_invalid_code",
+                        "title": "Title of test error",
+                        "detail": "Details of test error with invalid code"
+                    }
+                ]
+            }
         )
         assert err.error is not None
-        assert err.error.code == "some_error"
-        assert err.error.charge is None
+        assert err.error.code == "invalid_test_code"
+        assert err.error.status == "477"
+        assert len(err.error.errors) == 1
+        assert err.error.errors[0].code == "some_invalid_code"
 
     def test_error_object_not_dict(self):
         err = error.FintectureError("message", json_body={"error": "not a dict"})
         assert err.error is None
-
-
-class FintectureErrorWithParamCode(object):
-    def test_repr(self):
-        err = error.CardError(
-            u"öre",
-            param="cparam",
-            code="ccode",
-            http_status=403,
-            headers={"request-id": "123"},
-        )
-        if six.PY2:
-            assert (
-                repr(err) == "CardError(message=u'\\xf6re', param='cparam', "
-                "code='ccode', http_status=403, request_id='123')"
-            )
-        else:
-            assert (
-                repr(err)
-                == "CardError(message='öre', param='cparam', code='ccode', "
-                "http_status=403, request_id='123')"
-            )
 
 
 class TestApiConnectionError(object):

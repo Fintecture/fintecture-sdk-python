@@ -34,9 +34,5 @@ class Customer(
         )
 
     @classmethod
-    def delete(cls, customer_id, **params):
-        return Account.delete(customer_id, params)
-
-    @classmethod
     def class_url(cls):
         return "/ais/v1/customer"

@@ -18,11 +18,10 @@ class TestTestHelperAPIResource(object):
             def __init__(self, resource):
                 self.resource = resource
 
-            def do_stuff(self, idempotency_key=None, **params):
+            def do_stuff(self, **params):
                 url = self.instance_url() + "/do_the_thing"
-                headers = util.populate_headers(idempotency_key)
                 self.resource.refresh_from(
-                    self.resource.request("post", url, params, headers)
+                    self.resource.request("post", url, params, {})
                 )
                 return self.resource
 
@@ -31,7 +30,7 @@ class TestTestHelperAPIResource(object):
             "post",
             "/v1/test_helpers/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyTestHelpersResource.TestHelpers.do_stuff("mid", foo="bar")
@@ -48,7 +47,7 @@ class TestTestHelperAPIResource(object):
             "post",
             "/v1/test_helpers/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyTestHelpersResource.construct_from({"id": "mid"}, "mykey")

@@ -29,24 +29,43 @@ class TestIntegration(object):
             self.mock_server_thread.join()
 
     @pytest.fixture(autouse=True)
+    def api_base(self):
+        from fintecture import production_api_base, sandbox_api_base, env
+
+        if env not in fintecture.AVAILABLE_ENVS:
+            raise ValueError(
+                "Defined environment value is invalid. "
+                "Please check that specified environment value is one of %r\n" % fintecture.AVAILABLE_ENVS
+            )
+        if env == fintecture.ENVIRONMENT_SANDBOX:
+            return sandbox_api_base
+        elif env == fintecture.ENVIRONMENT_PRODUCTION:
+            return production_api_base
+
+        return sandbox_api_base
+
+    @pytest.fixture(autouse=True)
     def setup_fintecture(self):
         orig_attrs = {
-            "api_base": fintecture.api_base,
-            "api_key": fintecture.api_key,
+            "api_base": self.api_base(),
+            "app_id": fintecture.app_id,
+            "app_secret": fintecture.app_secret,
             "default_http_client": fintecture.default_http_client,
             "enable_telemetry": fintecture.enable_telemetry,
             "max_network_retries": fintecture.max_network_retries,
             "proxy": fintecture.proxy,
         }
         fintecture.api_base = "http://localhost:12111"  # fintecture-mock
-        fintecture.api_key = "sk_test_123"
+        fintecture.app_id = "test_123"
+        fintecture.app_secret = "test_456"
         fintecture.default_http_client = None
         fintecture.enable_telemetry = False
         fintecture.max_network_retries = 3
         fintecture.proxy = None
         yield
         fintecture.api_base = orig_attrs["api_base"]
-        fintecture.api_key = orig_attrs["api_key"]
+        fintecture.app_id = orig_attrs["app_id"]
+        fintecture.app_secret = orig_attrs["app_secret"]
         fintecture.default_http_client = orig_attrs["default_http_client"]
         fintecture.enable_telemetry = orig_attrs["enable_telemetry"]
         fintecture.max_network_retries = orig_attrs["max_network_retries"]
@@ -162,7 +181,7 @@ class TestIntegration(object):
                         )
                         assert "last_request_metrics" in telemetry
                         req_id = telemetry["last_request_metrics"][
-                            "request_id"
+                            "x_request_id"
                         ]
                         duration_ms = telemetry["last_request_metrics"][
                             "request_duration_ms"
@@ -180,7 +199,7 @@ class TestIntegration(object):
                     self.send_header(
                         "Content-Type", "application/json; charset=utf-8"
                     )
-                    self.send_header("Request-Id", "req_%d" % req_num)
+                    self.send_header("X-Request-ID", "req_%d" % req_num)
                     self.end_headers()
                     self.wfile.write(json.dumps({}).encode("utf-8"))
                 except AssertionError as ex:
@@ -227,7 +246,7 @@ class TestIntegration(object):
                     telemetry = json.loads(
                         self.headers.get("X-Fintecture-Client-Telemetry")
                     )
-                    req_id = telemetry["last_request_metrics"]["request_id"]
+                    req_id = telemetry["last_request_metrics"]["x_request_id"]
                     with self.__class__.stats_lock:
                         self.__class__.seen_metrics.add(req_id)
 
@@ -235,7 +254,7 @@ class TestIntegration(object):
                 self.send_header(
                     "Content-Type", "application/json; charset=utf-8"
                 )
-                self.send_header("Request-Id", "req_%d" % req_num)
+                self.send_header("X-Request-ID", "req_%d" % req_num)
                 self.end_headers()
                 self.wfile.write(json.dumps({}).encode("utf-8"))
 

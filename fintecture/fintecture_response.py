@@ -5,34 +5,30 @@ from collections import OrderedDict
 
 
 class FintectureResponseBase(object):
-    def __init__(self, code, headers):
+    def __init__(self, url, code, headers):
+        self.url = url
         self.code = code
         self.headers = headers
 
     @property
-    def idempotency_key(self):
+    def x_request_id(self):
         try:
-            return self.headers["idempotency-key"]
-        except KeyError:
-            return None
-
-    @property
-    def request_id(self):
-        try:
-            return self.headers["request-id"]
+            return self.headers["x-request-id"]
         except KeyError:
             return None
 
 
 class FintectureResponse(FintectureResponseBase):
-    def __init__(self, body, code, headers):
-        FintectureResponseBase.__init__(self, code, headers)
+    def __init__(self, url, body, code, headers):
+        FintectureResponseBase.__init__(self, url, code, headers)
         self.body = body
         try:
             self.data = json.loads(body, object_pairs_hook=OrderedDict)
         except Exception as e:
             # keep Fintecture error format
             self.data = {
+                'status': code,
+                'code': 'internal_invalid_json',
                 'errors': [
                     {
                         'code': 'internal_invalid_json',
@@ -41,9 +37,3 @@ class FintectureResponse(FintectureResponseBase):
                     }
                 ]
             }
-
-
-class FintectureStreamResponse(FintectureResponseBase):
-    def __init__(self, io, code, headers):
-        FintectureResponseBase.__init__(self, code, headers)
-        self.io = io

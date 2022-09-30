@@ -125,23 +125,10 @@ class APIResource(FintectureObject):
         fintecture_account = util.read_special_variable(
             params, "fintecture_account", fintecture_account
         )
-        fintecture_app_id = util.read_special_variable(
-            params, "app_id", app_id
-        )
-        fintecture_app_secret = util.read_special_variable(
-            params, "app_secret", None
-        )
-        fintecture_private_key = util.read_special_variable(
-            params, "private_key", None
-        )
         headers = util.read_special_variable(params, "headers", None)
 
         requestor = api_requestor.APIRequestor(
-            app_id=fintecture_app_id,
-            app_secret=fintecture_app_secret,
-            private_key=fintecture_private_key,
-            api_version=fintecture_version,
-            account=fintecture_account
+            app_id, api_version=fintecture_version, account=fintecture_account
         )
 
         if idempotency_key is not None:

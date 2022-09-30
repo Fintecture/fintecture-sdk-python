@@ -7,7 +7,7 @@ import fintecture
 
 print("Searching URL to connect with AIS...")
 
-redirect_uri = 'https://webhook.site/5940c656-7fd3-40a0-ad41-9cfba1e986f3'
+redirect_uri = 'https://webhook.site/4ff3f300-c82c-4b4f-b92e-d0691656a663'
 
 resp = fintecture.AIS.connect(
     app_id=os.environ.get("FINTECTURE_APP_ID"),

@@ -24,7 +24,6 @@ __all__ = [
     "utf8",
     "log_info",
     "log_debug",
-    "dashboard_link",
     "logfmt",
 ]
 
@@ -63,21 +62,6 @@ def log_info(message, **params):
     if _console_log_level() in ["debug", "info"]:
         print(msg, file=sys.stderr)
     logger.info(msg)
-
-
-def _test_or_live_environment():
-    if fintecture.api_key is None:
-        return
-    match = re.match(r"sk_(live|test)_", fintecture.api_key)
-    if match is None:
-        return
-    return match.groups()[0]
-
-
-def dashboard_link(request_id):
-    return "https://dashboard.fintecture.com/{env}/logs/{reqid}".format(
-        env=_test_or_live_environment() or "test", reqid=request_id
-    )
 
 
 def logfmt(props):
@@ -138,7 +122,7 @@ def get_object_classes():
 
 
 def convert_to_fintecture_object(
-    resp, app_id=None, fintecture_version=None, fintecture_account=None, params=None
+    resp, app_id=None, fintecture_version=None, params=None
 ):
     # If we get a FintectureResponse, we'll want to return a
     # FintectureObject with the last_response field filled out with
@@ -152,7 +136,7 @@ def convert_to_fintecture_object(
     if isinstance(resp, list):
         return [
             convert_to_fintecture_object(
-                i, app_id, fintecture_version, fintecture_account
+                i, app_id, fintecture_version
             )
             for i in resp
         ]
@@ -172,7 +156,6 @@ def convert_to_fintecture_object(
             resp,
             app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             last_response=fintecture_response,
         )
 
@@ -209,12 +192,6 @@ def convert_to_dict(obj):
         return {k: convert_to_dict(v) for k, v in six.iteritems(obj)}
     else:
         return obj
-
-
-def populate_headers(idempotency_key):
-    if idempotency_key is not None:
-        return {"Idempotency-Key": idempotency_key}
-    return None
 
 
 def read_special_variable(params, key_name, default_value):

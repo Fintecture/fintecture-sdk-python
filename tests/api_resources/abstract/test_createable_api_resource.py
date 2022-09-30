@@ -12,7 +12,7 @@ class TestCreateableAPIResource(object):
             "post",
             "/v1/mycreatables",
             {"object": "charge", "foo": "bar"},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         res = self.MyCreatable.create()
@@ -22,20 +22,20 @@ class TestCreateableAPIResource(object):
         assert res.foo == "bar"
 
         assert res.last_response is not None
-        assert res.last_response.request_id == "req_id"
+        assert res.last_response.x_request_id == "req_id"
 
     def test_idempotent_create(self, request_mock):
         request_mock.stub_request(
             "post",
             "/v1/mycreatables",
             {"object": "charge", "foo": "bar"},
-            rheaders={"idempotency-key": "foo"},
+            rheaders={},
         )
 
-        res = self.MyCreatable.create(idempotency_key="foo")
+        res = self.MyCreatable.create()
 
         request_mock.assert_requested(
-            "post", "/v1/mycreatables", {}, {"Idempotency-Key": "foo"}
+            "post", "/v1/mycreatables", {}, {}
         )
         assert isinstance(res, fintecture.Charge)
         assert res.foo == "bar"

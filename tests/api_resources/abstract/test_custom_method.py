@@ -11,33 +11,20 @@ class TestCustomMethod(object):
     @fintecture.api_resources.abstract.custom_method(
         "do_list_stuff", http_verb="get", http_path="do_the_list_thing"
     )
-    @fintecture.api_resources.abstract.custom_method(
-        "do_stream_stuff",
-        http_verb="post",
-        http_path="do_the_stream_thing",
-        is_streaming=True,
-    )
     class MyResource(fintecture.api_resources.abstract.APIResource):
         OBJECT_NAME = "myresource"
 
-        def do_stuff(self, idempotency_key=None, **params):
+        def do_stuff(self, **params):
             url = self.instance_url() + "/do_the_thing"
-            headers = util.populate_headers(idempotency_key)
-            self.refresh_from(self.request("post", url, params, headers))
+            self.refresh_from(self.request("post", url, params, {}))
             return self
-
-        def do_stream_stuff(self, idempotency_key=None, **params):
-            url = self.instance_url() + "/do_the_stream_thing"
-            headers = util.populate_headers(idempotency_key)
-            return self.request_stream("post", url, params, headers)
 
         @classmethod
         def _cls_do_stuff_new_codegen(
             cls,
             id,
-            api_key=None,
+            app_id=None,
             fintecture_version=None,
-            fintecture_account=None,
             **params
         ):
             return cls._static_request(
@@ -45,20 +32,18 @@ class TestCustomMethod(object):
                 "/v1/myresources/{id}/do_the_thing".format(
                     id=util.sanitize_id(id)
                 ),
-                api_key=api_key,
+                app_id=app_id,
                 fintecture_version=fintecture_version,
-                fintecture_account=fintecture_account,
                 params=params,
             )
 
         @util.class_method_variant("_cls_do_stuff_new_codegen")
-        def do_stuff_new_codegen(self, idempotency_key=None, **params):
+        def do_stuff_new_codegen(self, **params):
             return self._request(
                 "post",
                 "/v1/myresources/{id}/do_the_thing".format(
                     id=util.sanitize_id(self.get("id"))
                 ),
-                idempotency_key=idempotency_key,
                 params=params,
             )
 
@@ -67,7 +52,7 @@ class TestCustomMethod(object):
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyResource.do_stuff("mid", foo="bar")
@@ -90,7 +75,7 @@ class TestCustomMethod(object):
                     {"id": "cus_2", "object": "customer"},
                 ],
             },
-            rheaders={"request-id": "req_123"},
+            rheaders={"x-request-id": "req_123"},
         )
 
         resp = self.MyResource.do_list_stuff("mid", param1="abc", param2="def")
@@ -113,7 +98,7 @@ class TestCustomMethod(object):
                     {"id": "cus_3", "object": "customer"},
                 ],
             },
-            rheaders={"request-id": "req_123"},
+            rheaders={"x-request-id": "req_123"},
         )
 
         # Iterate through entire content
@@ -131,32 +116,12 @@ class TestCustomMethod(object):
 
         assert ids == ["cus_1", "cus_2", "cus_3"]
 
-    def test_call_custom_stream_method_class(self, request_mock):
-        request_mock.stub_request_stream(
-            "post",
-            "/v1/myresources/mid/do_the_stream_thing",
-            "response body",
-            rheaders={"request-id": "req_id"},
-        )
-
-        resp = self.MyResource.do_stream_stuff("mid", foo="bar")
-
-        request_mock.assert_requested_stream(
-            "post", "/v1/myresources/mid/do_the_stream_thing", {"foo": "bar"}
-        )
-
-        body_content = resp.io.read()
-        if hasattr(body_content, "decode"):
-            body_content = body_content.decode("utf-8")
-
-        assert body_content == "response body"
-
     def test_call_custom_method_class_with_object(self, request_mock):
         request_mock.stub_request(
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyResource.construct_from({"id": "mid"}, "mykey")
@@ -167,33 +132,12 @@ class TestCustomMethod(object):
         )
         assert obj.thing_done is True
 
-    def test_call_custom_stream_method_class_with_object(self, request_mock):
-        request_mock.stub_request_stream(
-            "post",
-            "/v1/myresources/mid/do_the_stream_thing",
-            "response body",
-            rheaders={"request-id": "req_id"},
-        )
-
-        obj = self.MyResource.construct_from({"id": "mid"}, "mykey")
-        resp = self.MyResource.do_stream_stuff(obj, foo="bar")
-
-        request_mock.assert_requested_stream(
-            "post", "/v1/myresources/mid/do_the_stream_thing", {"foo": "bar"}
-        )
-
-        body_content = resp.io.read()
-        if hasattr(body_content, "decode"):
-            body_content = body_content.decode("utf-8")
-
-        assert body_content == "response body"
-
     def test_call_custom_method_instance(self, request_mock):
         request_mock.stub_request(
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyResource.construct_from({"id": "mid"}, "mykey")
@@ -204,49 +148,25 @@ class TestCustomMethod(object):
         )
         assert obj.thing_done is True
 
-    def test_call_custom_stream_method_instance(self, request_mock):
-        request_mock.stub_request_stream(
-            "post",
-            "/v1/myresources/mid/do_the_stream_thing",
-            "response body",
-            rheaders={"request-id": "req_id"},
-        )
-
-        obj = self.MyResource.construct_from({"id": "mid"}, "mykey")
-        resp = obj.do_stream_stuff(foo="bar")
-
-        request_mock.assert_requested_stream(
-            "post", "/v1/myresources/mid/do_the_stream_thing", {"foo": "bar"}
-        )
-
-        body_content = resp.io.read()
-        if hasattr(body_content, "decode"):
-            body_content = body_content.decode("utf-8")
-
-        assert body_content == "response body"
-
     def test_call_custom_method_class_special_fields(self, request_mock):
         request_mock.stub_request(
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         self.MyResource.do_stuff(
             "mid",
             foo="bar",
             fintecture_version="2017-08-15",
-            api_key="APIKEY",
-            idempotency_key="IdempotencyKey",
-            fintecture_account="Acc",
+            app_id="APP_ID",
         )
 
         request_mock.assert_requested(
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"foo": "bar"},
-            {"Idempotency-Key": "IdempotencyKey"},
         )
         request_mock.assert_api_version("2017-08-15")
 
@@ -257,23 +177,20 @@ class TestCustomMethod(object):
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         self.MyResource.do_stuff_new_codegen(
             "mid",
             foo="bar",
             fintecture_version="2017-08-15",
-            api_key="APIKEY",
-            idempotency_key="IdempotencyKey",
-            fintecture_account="Acc",
+            app_id="APP_ID",
         )
 
         request_mock.assert_requested(
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"foo": "bar"},
-            {"Idempotency-Key": "IdempotencyKey"},
         )
         request_mock.assert_api_version("2017-08-15")
 
@@ -284,16 +201,14 @@ class TestCustomMethod(object):
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"id": "mid", "thing_done": True},
-            rheaders={"request-id": "req_id"},
+            rheaders={"x-request-id": "req_id"},
         )
 
         obj = self.MyResource.construct_from({"id": "mid"}, "mykey")
         obj.do_stuff_new_codegen(
             foo="bar",
             fintecture_version="2017-08-15",
-            api_key="APIKEY",
-            idempotency_key="IdempotencyKey",
-            fintecture_account="Acc",
+            app_id="APP_ID",
             headers={"extra_header": "val"},
         )
 
@@ -301,6 +216,6 @@ class TestCustomMethod(object):
             "post",
             "/v1/myresources/mid/do_the_thing",
             {"foo": "bar"},
-            {"Idempotency-Key": "IdempotencyKey", "extra_header": "val"},
+            {"extra_header": "val"},
         )
         request_mock.assert_api_version("2017-08-15")
