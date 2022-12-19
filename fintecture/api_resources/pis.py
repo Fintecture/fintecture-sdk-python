@@ -86,18 +86,20 @@ class PIS(APIResource):
             }
         })
         del params['language']
-        with_virtualbeneficiary = params.get('with_virtualbeneficiary', False)
-        del params['with_virtualbeneficiary']
 
-        url = "/pis/v2/request-to-pay?redirect_uri={url}&with_virtualbeneficiary={virtual}".format(
-            url=redirect_uri,
-            virtual='true' if with_virtualbeneficiary else 'false'
-        )
+        with_virtualbeneficiary = params.get('with_virtualbeneficiary', False)
+        if with_virtualbeneficiary:
+            del params['with_virtualbeneficiary']
 
         state = params.get('state', False)
         if state:
-            url += '&state={}'.format(state)
             del params['state']
+
+        url = "/pis/v2/request-to-pay?redirect_uri={url}{virtual}{state}".format(
+            url=redirect_uri,
+            virtual='&with_virtualbeneficiary=true' if with_virtualbeneficiary else '',
+            state='&state={}'.format(state) if state else ''
+        )
 
         return cls._static_request(
             "post",
