@@ -10,13 +10,12 @@ class ListableAPIResource(APIResource):
 
     @classmethod
     def list(
-        cls, api_key=None, fintecture_version=None, fintecture_account=None, **params
+        cls, app_id=None, fintecture_version=None, **params
     ):
         return cls._static_request(
             "get",
             cls.class_url(),
-            api_key=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             params=params,
         )

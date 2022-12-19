@@ -51,7 +51,7 @@ class FintectureObject(dict):
     ):
         super(FintectureObject, self).__init__()
 
-        self.app_id = None
+        self.app_id = app_id
 
         self._unsaved_values = set()
         self._transient_values = set()

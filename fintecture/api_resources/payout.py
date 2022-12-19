@@ -16,9 +16,8 @@ class Payout(
     def _cls_cancel(
         cls,
         payout,
-        api_key=None,
+        app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         **params
     ):
         return cls._static_request(
@@ -26,20 +25,18 @@ class Payout(
             "/v1/payouts/{payout}/cancel".format(
                 payout=util.sanitize_id(payout)
             ),
-            api_key=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             params=params,
         )
 
     @util.class_method_variant("_cls_cancel")
-    def cancel(self, idempotency_key=None, **params):
+    def cancel(self, **params):
         return self._request(
             "post",
             "/v1/payouts/{payout}/cancel".format(
                 payout=util.sanitize_id(self.get("id"))
             ),
-            idempotency_key=idempotency_key,
             params=params,
         )
 
@@ -47,9 +44,8 @@ class Payout(
     def _cls_reverse(
         cls,
         payout,
-        api_key=None,
+        app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         **params
     ):
         return cls._static_request(
@@ -57,19 +53,17 @@ class Payout(
             "/v1/payouts/{payout}/reverse".format(
                 payout=util.sanitize_id(payout)
             ),
-            api_key=api_key,
+            app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             params=params,
         )
 
     @util.class_method_variant("_cls_reverse")
-    def reverse(self, idempotency_key=None, **params):
+    def reverse(self, **params):
         return self._request(
             "post",
             "/v1/payouts/{payout}/reverse".format(
                 payout=util.sanitize_id(self.get("id"))
             ),
-            idempotency_key=idempotency_key,
             params=params,
         )

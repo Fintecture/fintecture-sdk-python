@@ -7,18 +7,14 @@ class CreateableAPIResource(APIResource):
     @classmethod
     def create(
         cls,
-        api_key=None,
-        idempotency_key=None,
+        app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         **params
     ):
         return cls._static_request(
             "post",
             cls.class_url(),
-            api_key,
-            idempotency_key,
+            app_id,
             fintecture_version,
-            fintecture_account,
             params,
         )

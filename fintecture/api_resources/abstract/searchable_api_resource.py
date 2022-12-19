@@ -10,7 +10,6 @@ class SearchableAPIResource(APIResource):
         search_url,
         app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         **params
     ):
         return cls._static_request(
@@ -18,6 +17,5 @@ class SearchableAPIResource(APIResource):
             search_url,
             app_id=app_id,
             fintecture_version=fintecture_version,
-            fintecture_account=fintecture_account,
             params=params,
         )
