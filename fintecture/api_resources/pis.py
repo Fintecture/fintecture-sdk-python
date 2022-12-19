@@ -90,7 +90,7 @@ class PIS(APIResource):
         with_virtualbeneficiary = params.get('with_virtualbeneficiary', False)
         if with_virtualbeneficiary:
             del params['with_virtualbeneficiary']
-            
+
         state = params.get('state', False)
         if state:
             del params['state']
