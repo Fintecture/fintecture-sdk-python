@@ -37,6 +37,10 @@ class Account(
         )
 
     @classmethod
+    def delete(cls, customer_id, **params):
+        return cls._cls_delete(customer_id, **params)
+
+    @classmethod
     def search(cls, *args, **kwargs):
         return cls._search(search_url="/res/v1/providers", *args, **kwargs)
 

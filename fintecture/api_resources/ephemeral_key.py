@@ -12,10 +12,8 @@ class EphemeralKey(DeletableAPIResource):
     @classmethod
     def create(
         cls,
-        api_key=None,
-        idempotency_key=None,
+        app_id=None,
         fintecture_version=None,
-        fintecture_account=None,
         **params
     ):
         if fintecture_version is None:
@@ -25,12 +23,11 @@ class EphemeralKey(DeletableAPIResource):
             )
 
         requestor = api_requestor.APIRequestor(
-            api_key, api_version=fintecture_version, account=fintecture_account
+            app_id, api_version=fintecture_version
         )
 
         url = cls.class_url()
-        headers = util.populate_headers(idempotency_key)
-        response, api_key = requestor.request("post", url, params, headers)
+        response, my_app_id = requestor.request("post", url, params, {})
         return util.convert_to_fintecture_object(
-            response, api_key, fintecture_version, fintecture_account
+            response, my_app_id, fintecture_version
         )

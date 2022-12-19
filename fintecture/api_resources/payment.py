@@ -32,10 +32,14 @@ class Payment(
     def connect(cls, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: A state parameter which will be provided back on redirection."
+                message="state: A state parameter which will be provided back on redirection.",
+                param='state',
             )
-        state = params.get('state')
+        state = params.get('state', '')
         del params['state']
+        with_virtualbeneficiary = params.get('with_virtualbeneficiary', False)
+        if with_virtualbeneficiary:
+            del params['with_virtualbeneficiary']
         params.update({
             'headers': {
                 'Content-Type': 'application/json'
@@ -43,7 +47,10 @@ class Payment(
         })
         return cls._static_request(
             "post",
-            "/pis/v2/connect?state={}".format(state),
+            "/pis/v2/connect?state={}{}".format(
+                state,
+                '&with_virtualbeneficiary=true' if with_virtualbeneficiary else ''
+            ),
             params=params,
         )
 
@@ -51,7 +58,8 @@ class Payment(
     def initiate(cls, provider_id, redirect_uri, **params):
         if not params.get('state', False):
             raise error.InvalidRequestError(
-                "state: A state parameter which will be provided back on redirection."
+                message="state: A state parameter which will be provided back on redirection.",
+                param='state',
             )
         state = params.get('state')
         del params['state']
@@ -85,6 +93,30 @@ class Payment(
             params=params,
         )
 
+    def update(self, **params):
+        session_id = self.get('data', {}).get('id', {})
+        if not params.get('status', False):
+            raise error.InvalidRequestError(
+                message="status: is a parameter for update payment attributes and "
+                        "only accepts 'payment_cancelled' value",
+                param='status'
+            )
+        status = params.get('status')
+        del params['status']
+
+        params.update({
+            "meta": {
+                "status": status
+            },
+            'headers': {
+                'Content-Type': 'application/json'
+            }
+        })
+        return self._request(
+            "patch",
+            "/pis/v2/payments/{}".format(session_id),
+            params=params,
+        )
 
     @classmethod
     def class_url(cls):
